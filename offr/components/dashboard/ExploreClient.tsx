@@ -1,74 +1,103 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 
-const COURSES = [
-  { name: "PPE", full: "Philosophy, Politics & Economics", unis: ["Oxford","Warwick","UCL","Durham"], vibe: "The classic route to politics, journalism or finance.", tags: ["Politics","Economics","Philosophy"], hidden: false },
-  { name: "Liberal Arts", full: "Liberal Arts & Sciences", unis: ["UCL","King's College London","Exeter"], vibe: "Design your own degree. Mix humanities, social science and natural science.", tags: ["History","Philosophy","Sociology"], hidden: true },
-  { name: "MORSE", full: "Maths, Operational Research, Stats & Economics", unis: ["Warwick"], vibe: "One of the most employable degrees in the UK. Maths meets the real world.", tags: ["Mathematics","Economics"], hidden: true },
-  { name: "Human Sciences", full: "Human Sciences", unis: ["Oxford","UCL"], vibe: "Biology, psychology, anthropology and evolution combined.", tags: ["Biology","Psychology"], hidden: true },
-  { name: "Management", full: "Management with Finance/Marketing", unis: ["LSE","Bath","Warwick"], vibe: "Not MBA. Proper academic business with quantitative edge.", tags: ["Business","Economics","Mathematics"], hidden: false },
-  { name: "International Relations", full: "International Relations", unis: ["LSE","Warwick","St Andrews","Edinburgh"], vibe: "Geopolitics, diplomacy, global economics. Great for law or international careers.", tags: ["Politics","History","Economics"], hidden: false },
-  { name: "Cognitive Science", full: "Cognitive Science", unis: ["Edinburgh","Sussex"], vibe: "Brain, mind, AI and language. One of the most underrated degrees.", tags: ["Psychology","Computer Science","Philosophy"], hidden: true },
-  { name: "History & Economics", full: "History & Economics", unis: ["LSE","Warwick","Durham"], vibe: "More analytical than straight history, more contextual than straight econ.", tags: ["History","Economics"], hidden: false },
-  { name: "Computer Science & Philosophy", full: "Computer Science & Philosophy", unis: ["Oxford","Edinburgh","King's College London"], vibe: "Ethics, AI and logic. Rare combination that stands out.", tags: ["Computer Science","Philosophy"], hidden: true },
-  { name: "Biomedical Sciences", full: "Biomedical Sciences", unis: ["UCL","Imperial","King's College London","Edinburgh"], vibe: "Medicine-adjacent without the clinical commitment. Strong for research.", tags: ["Biology","Chemistry"], hidden: false },
-  { name: "Architecture", full: "Architecture (B.Arch / BA)", unis: ["UCL","Edinburgh","Manchester","Bath"], vibe: "Art meets engineering meets planning. A lifestyle degree.", tags: ["Art & Design","Mathematics"], hidden: false },
-  { name: "Law with another subject", full: "Law with French/German/Philosophy/Criminology", unis: ["UCL","Edinburgh","Warwick","Durham"], vibe: "Differentiates you in training contract apps. Broader skills.", tags: ["Law"], hidden: true },
-  { name: "Global Health", full: "Global Health & Social Medicine", unis: ["King's College London"], vibe: "Medicine's policy and social side. Underrated and unusual.", tags: ["Biology","Sociology"], hidden: true },
-  { name: "Economics & Politics", full: "Economics & Politics", unis: ["Warwick","Bristol","Edinburgh","Bath"], vibe: "Everything you need for policy, consultancy or finance.", tags: ["Economics","Politics"], hidden: false },
-  { name: "Linguistics", full: "Linguistics", unis: ["Cambridge","Edinburgh","UCL"], vibe: "Language, cognition, structure. Massively underrated for tech careers.", tags: ["Philosophy","Computer Science"], hidden: true },
-  { name: "Management Science", full: "Management Science / Decision Science", unis: ["Warwick","LSE","Bath"], vibe: "Quantitative business. Loved by consulting firms.", tags: ["Mathematics","Business","Economics"], hidden: true },
+interface Course {
+  course_id: string;
+  course_name: string;
+  faculty: string;
+  university_id: string;
+  degree_type?: string;
+}
+
+interface University {
+  university_id: string;
+  university_name: string;
+}
+
+const HIDDEN_GEMS = [
+  "MORSE", "Liberal Arts", "PPE", "Human Sciences", "Cognitive Science",
+  "Global Health", "Management Science", "Law with", "History & Economics",
+  "Computer Science & Philosophy", "Linguistics"
 ];
 
-const ALL_TAGS = [...new Set(COURSES.flatMap(c => c.tags))].sort();
+const FACULTIES = [
+  "Economics & Business", "Law", "Computer Science", "Engineering",
+  "Mathematics", "Natural Sciences", "Humanities", "Social Sciences",
+  "Medicine & Health", "Arts & Design", "Education", "Architecture"
+];
 
-export function ExploreClient({ interests }: { interests: string[] }) {
-  const [activeTag, setActiveTag] = useState<string | null>(null);
-  const [showHidden, setShowHidden] = useState(false);
+export function ExploreClient({
+  interests,
+  courses,
+  universities,
+}: {
+  interests: string[];
+  courses: Course[];
+  universities: University[];
+}) {
   const [search, setSearch] = useState("");
+  const [activeFaculty, setActiveFaculty] = useState<string | null>(null);
+  const [activeUni, setActiveUni] = useState<string | null>(null);
+  const [showGems, setShowGems] = useState(false);
 
-  const filtered = COURSES.filter(c => {
-    if (search && !c.name.toLowerCase().includes(search.toLowerCase()) &&
-        !c.full.toLowerCase().includes(search.toLowerCase()) &&
-        !c.vibe.toLowerCase().includes(search.toLowerCase())) return false;
-    if (activeTag && !c.tags.includes(activeTag)) return false;
-    if (!showHidden && c.hidden) return false;
-    return true;
-  });
+  const uniMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    universities.forEach(u => { m[u.university_id] = u.university_name; });
+    return m;
+  }, [universities]);
 
-  const suggested = interests.length > 0
-    ? COURSES.filter(c => c.tags.some(t => interests.includes(t)))
-    : [];
+  const filtered = useMemo(() => {
+    return courses.filter(c => {
+      if (search && !c.course_name.toLowerCase().includes(search.toLowerCase()) &&
+          !c.faculty?.toLowerCase().includes(search.toLowerCase())) return false;
+      if (activeFaculty && c.faculty !== activeFaculty) return false;
+      if (activeUni && c.university_id !== activeUni) return false;
+      if (showGems && !HIDDEN_GEMS.some(g => c.course_name.includes(g))) return false;
+      return true;
+    }).slice(0, 50);
+  }, [courses, search, activeFaculty, activeUni, showGems]);
+
+  const suggested = useMemo(() => {
+    if (!interests.length) return [];
+    return courses.filter(c =>
+      interests.some(i => c.course_name.toLowerCase().includes(i.toLowerCase()) ||
+        c.faculty?.toLowerCase().includes(i.toLowerCase()))
+    ).slice(0, 4);
+  }, [courses, interests]);
+
+  const isGem = (name: string) => HIDDEN_GEMS.some(g => name.includes(g));
 
   return (
     <div className="p-8 max-w-3xl">
       <div className="mb-8">
         <h1 className="text-4xl font-semibold tracking-tight mb-2">Explore Courses</h1>
-        <p className="text-zinc-500">Discover degrees you might not have considered. Some of the best courses are the least obvious.</p>
+        <p className="text-zinc-500">
+          {courses.length > 0 ? `${courses.length} real courses from your database.` : "Loading courses…"}
+          {" "}Discover degrees you might not have considered.
+        </p>
       </div>
 
-      {/* Suggested based on interests */}
+      {/* Suggested */}
       {suggested.length > 0 && (
         <div className="mb-8">
           <div className="text-xs font-medium text-zinc-500 uppercase tracking-widest mb-4">
             Based on your interests · {interests.join(", ")}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {suggested.slice(0, 4).map(c => (
-              <div key={c.name} className="rounded-2xl border border-zinc-700 bg-zinc-900/40 p-5 hover:border-zinc-600 transition-colors">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="text-base font-semibold">{c.name}</div>
-                  {c.hidden && <span className="text-xs text-zinc-600 border border-zinc-800 rounded-full px-2 py-0.5">Hidden gem</span>}
+            {suggested.map(c => (
+              <div key={c.course_id} className="rounded-2xl border border-zinc-700 bg-zinc-900/40 p-5 hover:border-zinc-600 transition-colors">
+                <div className="flex items-start justify-between mb-1">
+                  <div className="text-base font-semibold leading-snug">{c.course_name}</div>
+                  {isGem(c.course_name) && <span className="text-xs text-amber-500 shrink-0 ml-2">✦</span>}
                 </div>
-                <p className="text-xs text-zinc-500 mb-3">{c.full}</p>
-                <p className="text-sm text-zinc-400 leading-relaxed">{c.vibe}</p>
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {c.unis.slice(0,3).map(u => (
-                    <span key={u} className="text-xs border border-zinc-800 rounded-full px-2 py-0.5 text-zinc-600">{u}</span>
-                  ))}
-                </div>
+                <p className="text-xs text-zinc-500 mb-3">{uniMap[c.university_id] || c.university_id}</p>
+                <p className="text-xs text-zinc-600">{c.faculty}</p>
+                <Link href={`/dashboard/assess?query=${encodeURIComponent(c.course_name)}&uni=${c.university_id}`}
+                  className="mt-3 inline-block text-xs text-zinc-500 hover:text-zinc-300 transition border border-zinc-800 hover:border-zinc-700 rounded-full px-3 py-1">
+                  Check chances →
+                </Link>
               </div>
             ))}
           </div>
@@ -76,55 +105,68 @@ export function ExploreClient({ interests }: { interests: string[] }) {
       )}
 
       {/* Search + filters */}
-      <div className="mb-6 space-y-4">
+      <div className="mb-6 space-y-3">
         <input
           className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 text-base text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
           placeholder="Search courses…"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
+
+        {/* University filter */}
+        <select
+          className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 text-base text-zinc-100 focus:outline-none focus:border-zinc-600 transition-colors"
+          value={activeUni || ""}
+          onChange={e => setActiveUni(e.target.value || null)}>
+          <option value="">All universities</option>
+          {universities.map(u => (
+            <option key={u.university_id} value={u.university_id}>{u.university_name}</option>
+          ))}
+        </select>
+
+        {/* Faculty tags */}
         <div className="flex flex-wrap gap-2 items-center">
-          {ALL_TAGS.map(tag => (
-            <button key={tag} onClick={() => setActiveTag(activeTag === tag ? null : tag)}
-              className={`rounded-full border px-3 py-1.5 text-xs transition-all ${activeTag === tag ? "bg-zinc-100 text-zinc-950 border-zinc-100 font-medium" : "border-zinc-800 text-zinc-500 hover:border-zinc-700"}`}>
-              {tag}
+          {FACULTIES.map(f => (
+            <button key={f} onClick={() => setActiveFaculty(activeFaculty === f ? null : f)}
+              className={`rounded-full border px-3 py-1.5 text-xs transition-all ${activeFaculty === f ? "bg-zinc-100 text-zinc-950 border-zinc-100 font-medium" : "border-zinc-800 text-zinc-500 hover:border-zinc-700"}`}>
+              {f}
             </button>
           ))}
-          <button onClick={() => setShowHidden(v => !v)}
-            className={`ml-auto rounded-full border px-3 py-1.5 text-xs transition-all ${showHidden ? "bg-zinc-800 text-zinc-100 border-zinc-700" : "border-zinc-800 text-zinc-600 hover:border-zinc-700"}`}>
-            {showHidden ? "✦ Showing hidden gems" : "Show hidden gems"}
+          <button onClick={() => setShowGems(v => !v)}
+            className={`ml-auto rounded-full border px-3 py-1.5 text-xs transition-all ${showGems ? "bg-amber-500/10 text-amber-400 border-amber-500/20" : "border-zinc-800 text-zinc-600 hover:border-zinc-700"}`}>
+            ✦ Hidden gems
           </button>
         </div>
       </div>
 
-      {/* All courses */}
-      <div className="space-y-3">
-        {filtered.length === 0 && (
+      {/* Results */}
+      <div className="space-y-2">
+        {courses.length === 0 && (
+          <div className="text-center py-10 text-zinc-600">Loading courses from database…</div>
+        )}
+        {courses.length > 0 && filtered.length === 0 && (
           <div className="text-center py-10 text-zinc-600">No courses match your filters.</div>
         )}
         {filtered.map(c => (
-          <div key={c.name} className="rounded-2xl border border-zinc-800 bg-zinc-900/20 p-5 hover:border-zinc-700 transition-colors">
+          <div key={c.course_id} className="rounded-xl border border-zinc-800 bg-zinc-900/20 px-5 py-4 hover:border-zinc-700 transition-colors">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-1">
-                  <h3 className="text-lg font-semibold">{c.name}</h3>
-                  {c.hidden && <span className="text-xs text-amber-500 border border-amber-500/20 bg-amber-500/10 rounded-full px-2 py-0.5">Hidden gem ✦</span>}
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-base font-medium text-zinc-200">{c.course_name}</span>
+                  {isGem(c.course_name) && <span className="text-xs text-amber-500">✦</span>}
                 </div>
-                <p className="text-sm text-zinc-500 mb-2">{c.full}</p>
-                <p className="text-base text-zinc-400">{c.vibe}</p>
+                <div className="text-sm text-zinc-500">{uniMap[c.university_id] || c.university_id} · {c.faculty}</div>
               </div>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2 items-center">
-              {c.unis.map(u => (
-                <span key={u} className="text-xs border border-zinc-800 rounded-full px-2.5 py-1 text-zinc-500">{u}</span>
-              ))}
-              <Link href={`/dashboard/assess?query=${encodeURIComponent(c.full)}`}
-                className="ml-auto text-xs text-zinc-500 hover:text-zinc-300 transition border border-zinc-800 hover:border-zinc-700 rounded-full px-3 py-1">
-                Check my chances →
+              <Link href={`/dashboard/assess?query=${encodeURIComponent(c.course_name)}&uni=${c.university_id}`}
+                className="text-xs text-zinc-600 hover:text-zinc-300 transition border border-zinc-800 hover:border-zinc-700 rounded-full px-3 py-1 shrink-0">
+                Check →
               </Link>
             </div>
           </div>
         ))}
+        {filtered.length === 50 && (
+          <p className="text-center text-xs text-zinc-700 pt-2">Showing first 50 results — use search to narrow down.</p>
+        )}
       </div>
     </div>
   );
