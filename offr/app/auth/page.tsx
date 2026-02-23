@@ -13,8 +13,10 @@ export default function AuthPage() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${location.origin}/auth/callback` },
-
+      options: {
+        emailRedirectTo: `${location.origin}/auth/callback`,
+        shouldCreateUser: true,
+      },
     });
     setLoading(false);
     if (error) { setErr(error.message); return; }
@@ -36,7 +38,6 @@ export default function AuthPage() {
           <div>
             <h1 className="text-3xl font-semibold mb-2">Sign in</h1>
             <p className="text-zinc-500 mb-8 text-base">No password. We'll email you a magic link.</p>
-
             <div className="space-y-4">
               <input
                 type="email"
