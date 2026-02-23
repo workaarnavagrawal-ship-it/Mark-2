@@ -9,16 +9,43 @@ export default function CallbackPage() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session) {
+
+    const handleCallback = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        router.push("/auth?error=" + encodeURIComponent(error.message));
+        return;
+      }
+
+      if (session) {
         const { data: profile } = await supabase
           .from("profiles")
           .select("id")
           .eq("user_id", session.user.id)
           .single();
         router.push(profile ? "/dashboard" : "/onboarding");
+        return;
       }
-    });
+
+      // No session yet — wait for auth state change
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === "SIGNED_IN" && session) {
+          subscription.unsubscribe();
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("user_id", session.user.id)
+            .single();
+          router.push(profile ? "/dashboard" : "/onboarding");
+        } else if (event === "SIGNED_OUT") {
+          subscription.unsubscribe();
+          router.push("/auth?error=sign_in_failed");
+        }
+      });
+    };
+
+    handleCallback();
   }, [router]);
 
   return (

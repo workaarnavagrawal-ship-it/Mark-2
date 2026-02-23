@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { DashboardNav } from "@/components/dashboard/DashboardNav";
+import { StickyNotes } from "@/components/dashboard/StickyNotes";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
@@ -9,19 +9,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!user) redirect("/auth");
 
   const { data: profile } = await supabase
-    .from("profiles")
-    .select("name, year, curriculum")
-    .eq("user_id", user.id)
-    .single();
-
+    .from("profiles").select("name").eq("user_id", user.id).single();
   if (!profile) redirect("/onboarding");
 
   return (
-    <div className="min-h-screen flex">
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
       <DashboardNav name={profile.name} />
-      <main className="flex-1 ml-64 min-h-screen">
+      <main style={{ flex: 1, marginLeft: "220px", minHeight: "100vh", position: "relative" }}>
         {children}
       </main>
+      <StickyNotes />
     </div>
   );
 }

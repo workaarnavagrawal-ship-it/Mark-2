@@ -7,63 +7,69 @@ export default async function LandingPage({
 }: {
   searchParams: { code?: string; token_hash?: string; type?: string };
 }) {
-  if (searchParams.code) {
-    redirect(`/auth/callback?code=${searchParams.code}`);
-  }
-  if (searchParams.token_hash && searchParams.type) {
-    redirect(`/auth/callback?token_hash=${searchParams.token_hash}&type=${searchParams.type}`);
-  }
+  if (searchParams.code) redirect(`/auth/callback?code=${searchParams.code}`);
+  if (searchParams.token_hash && searchParams.type) redirect(`/auth/callback?token_hash=${searchParams.token_hash}&type=${searchParams.type}`);
 
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (user) redirect("/dashboard");
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <nav className="px-8 py-6 flex items-center justify-between border-b border-zinc-800/50">
-        <span className="text-2xl font-semibold tracking-tight">offr</span>
-        <Link href="/auth" className="text-sm text-zinc-400 hover:text-zinc-100 transition-colors">
-          Sign in →
-        </Link>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)" }}>
+      <nav style={{ padding: "28px 48px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--b)" }}>
+        <span style={{ fontFamily: "var(--font-garamond, var(--serif))", fontSize: "22px", fontWeight: 400, fontStyle: "italic", letterSpacing: "-0.02em" }}>offr</span>
+        <Link href="/auth" style={{ fontSize: "14px", color: "var(--t3)", textDecoration: "none", transition: "color 150ms" }}>Sign in →</Link>
       </nav>
-      <main className="flex-1 flex items-center justify-center px-6">
-        <div className="max-w-2xl text-center">
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900 px-4 py-1.5 text-sm text-zinc-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            2024–25 real applicant data · Free · No card needed
+
+      <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 48px" }}>
+        <div style={{ maxWidth: "640px", textAlign: "center" }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: "8px",
+            border: "1px solid var(--b)", borderRadius: "var(--r-pill)",
+            padding: "6px 16px", fontSize: "13px", color: "var(--t3)", marginBottom: "48px",
+          }}>
+            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--safe-t)", display: "inline-block", animation: "pulse 2s infinite" }} />
+            2024–25 real applicant data · Free
           </div>
-          <h1 className="text-7xl md:text-8xl leading-none tracking-tight font-semibold mb-6">
-            Will you<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-b from-zinc-100 to-zinc-600">
-              get in?
-            </span>
+
+          <h1 style={{
+            fontFamily: "var(--font-garamond, var(--serif))",
+            fontSize: "72px", fontWeight: 400, letterSpacing: "-0.03em",
+            color: "var(--t)", lineHeight: 1, marginBottom: "28px",
+            fontStyle: "italic",
+          }}>
+            Will you<br />get in?
           </h1>
-          <p className="text-xl text-zinc-400 leading-relaxed mb-10 max-w-lg mx-auto">
-            Build your academic profile once. Get honest, data-driven offer predictions across all your UCAS choices.
+
+          <p style={{ fontSize: "18px", color: "var(--t3)", lineHeight: 1.7, marginBottom: "48px", maxWidth: "460px", margin: "0 auto 48px" }}>
+            Build your profile once. Get honest, data-driven offer predictions across all your UCAS choices.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/auth" className="inline-flex items-center justify-center rounded-2xl bg-zinc-100 text-zinc-950 px-10 py-4 text-base font-semibold hover:bg-white hover:scale-105 active:scale-95 transition-all">
+
+          <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+            <Link href="/auth" className="btn-primary" style={{ padding: "14px 32px", fontSize: "15px" }}>
               Build my profile →
             </Link>
-            <Link href="/dashboard/explore" className="inline-flex items-center justify-center rounded-2xl border border-zinc-800 px-10 py-4 text-base text-zinc-400 hover:border-zinc-600 hover:text-zinc-200 transition-all">
-              Explore courses
+            <Link href="/auth" className="btn-ghost" style={{ padding: "14px 32px", fontSize: "15px" }}>
+              Sign in
             </Link>
           </div>
-          <div className="mt-20 grid grid-cols-2 sm:grid-cols-4 gap-4">
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginTop: "80px" }}>
             {[
-              { icon: "🎓", label: "IB & A-Levels" },
-              { icon: "📊", label: "Real applicant data" },
-              { icon: "📝", label: "PS reviewed" },
-              { icon: "📍", label: "5 UCAS choices tracked" },
-            ].map(({ icon, label }) => (
-              <div key={label} className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 text-center">
-                <div className="text-2xl mb-2">{icon}</div>
-                <div className="text-sm text-zinc-400">{label}</div>
+              { label: "IB & A-Levels" },
+              { label: "Real applicant data" },
+              { label: "PS analysis" },
+              { label: "5 choices tracked" },
+            ].map(({ label }) => (
+              <div key={label} style={{ border: "1px solid var(--b)", borderRadius: "12px", padding: "16px 12px", background: "var(--s1)" }}>
+                <p style={{ fontSize: "13px", color: "var(--t3)" }}>{label}</p>
               </div>
             ))}
           </div>
         </div>
       </main>
+
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }`}</style>
     </div>
   );
 }

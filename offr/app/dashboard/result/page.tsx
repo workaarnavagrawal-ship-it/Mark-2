@@ -1,157 +1,151 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { loadAssessment } from "@/lib/storage";
 import type { OfferAssessResponse } from "@/lib/types";
 
-function Band({ band }: { band: "Safe"|"Target"|"Reach" }) {
-  const cls = band === "Safe" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
-    : band === "Target" ? "bg-amber-500/10 border-amber-500/20 text-amber-300"
-    : "bg-red-500/10 border-red-500/20 text-red-300";
-  return <span className={`inline-flex items-center rounded-full border px-4 py-1.5 text-sm font-semibold ${cls}`}>{band}</span>;
-}
+const BAND: Record<string, { bg: string; color: string; border: string; barColor: string }> = {
+  Safe: { bg: "var(--safe-bg)", color: "var(--safe-t)", border: "var(--safe-b)", barColor: "var(--safe-t)" },
+  Target: { bg: "var(--tgt-bg)", color: "var(--tgt-t)", border: "var(--tgt-b)", barColor: "var(--tgt-t)" },
+  Reach: { bg: "var(--rch-bg)", color: "var(--rch-t)", border: "var(--rch-b)", barColor: "var(--rch-t)" },
+};
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-6 mb-4">
-      <div className="text-xs font-medium text-zinc-500 uppercase tracking-widest mb-5">{title}</div>
+    <div className="card" style={{ marginBottom: "12px" }}>
+      <p className="label" style={{ marginBottom: "16px" }}>{title}</p>
       {children}
     </div>
   );
 }
 
 function Bullets({ items }: { items: string[] }) {
-  if (!items?.length) return <p className="text-sm text-zinc-700">—</p>;
+  if (!items?.length) return <p style={{ color: "var(--t3)", fontSize: "14px" }}>—</p>;
   return (
-    <ul className="space-y-3">
+    <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "10px" }}>
       {items.map((x, i) => (
-        <li key={i} className="flex gap-3 text-base text-zinc-400">
-          <span className="text-zinc-700 shrink-0 mt-0.5">·</span>
-          <span>{x}</span>
+        <li key={i} style={{ display: "flex", gap: "12px", fontSize: "14px", color: "var(--t2)", lineHeight: 1.6 }}>
+          <span style={{ color: "var(--b-strong)", flexShrink: 0, marginTop: "2px" }}>·</span>
+          {x}
         </li>
       ))}
     </ul>
   );
 }
 
-const EMOJI = { Safe: "🎉", Target: "🤔", Reach: "😬" };
-const MSG = { Safe: "Strong chance of an offer.", Target: "Could go either way.", Reach: "It's a stretch, but not impossible." };
-
 export default function ResultPage() {
   const [data, setData] = useState<OfferAssessResponse | null>(null);
-  useEffect(() => { setData(loadAssessment()); }, []);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); setData(loadAssessment()); }, []);
+  if (!mounted) return null;
 
   if (!data) return (
-    <div className="p-8 text-center">
-      <div className="text-4xl mb-4">🤷</div>
-      <p className="text-zinc-500 mb-6">No result yet.</p>
-      <Link href="/dashboard/assess" className="inline-flex rounded-2xl bg-zinc-100 text-zinc-950 px-8 py-3 font-semibold hover:bg-white transition">
-        Run an assessment →
-      </Link>
+    <div style={{ padding: "52px 56px" }}>
+      <p style={{ color: "var(--t3)", fontSize: "14px", marginBottom: "24px" }}>No result yet.</p>
+      <Link href="/dashboard/assess" className="btn-primary">Run an assessment →</Link>
     </div>
   );
 
-  const bandColor = data.band === "Safe" ? "text-emerald-400" : data.band === "Target" ? "text-amber-400" : "text-red-400";
-  const barColor = data.band === "Safe" ? "bg-emerald-400" : data.band === "Target" ? "bg-amber-400" : "bg-red-400";
+  const bs = BAND[data.band] || BAND.Reach;
+  const MSG: Record<string, string> = {
+    Safe: "You're comfortably above threshold and competitive in the real applicant pool.",
+    Target: "It genuinely could go either way. Your PS and interview (if applicable) will matter.",
+    Reach: "There's a meaningful gap to close. Strong elsewhere in your application matters here.",
+  };
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div style={{ padding: "52px 56px", maxWidth: "760px" }}>
       {/* Hero */}
-      <div className="mb-6">
-        <div className="flex items-start justify-between">
+      <div style={{ marginBottom: "40px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px" }}>
           <div>
-            <div className="flex items-center gap-3 mb-4"><Band band={data.band} /></div>
-            <div className={`text-6xl font-semibold mb-2 ${bandColor}`}>{data.chance_percent}%</div>
-            <h1 className="text-2xl font-semibold">{data.verdict}</h1>
-            <p className="mt-1 text-zinc-500">{EMOJI[data.band]} {MSG[data.band]}</p>
-            {data.course.course_name && (
-              <p className="mt-2 text-sm text-zinc-600">{data.course.course_name} · {data.course.faculty}</p>
-            )}
+            <span className="pill" style={{ background: bs.bg, color: bs.color, border: `1px solid ${bs.border}`, marginBottom: "20px", display: "inline-flex" }}>{data.band}</span>
+            <p style={{ fontFamily: "var(--font-garamond, var(--serif))", fontSize: "72px", fontWeight: 400, color: "var(--t)", lineHeight: 1, marginBottom: "12px", letterSpacing: "-0.03em" }}>
+              {data.chance_percent}<span style={{ fontSize: "36px", color: "var(--t3)" }}>%</span>
+            </p>
+            <p style={{ fontSize: "16px", color: "var(--t2)", marginBottom: "6px", fontFamily: "var(--font-garamond, var(--serif))" }}>{data.verdict}</p>
+            {data.course.course_name && <p style={{ fontSize: "13px", color: "var(--t3)" }}>{data.course.course_name} · {data.course.faculty}</p>}
           </div>
-          <div className="flex gap-2">
-            <Link href="/dashboard/assess" className="text-sm text-zinc-600 hover:text-zinc-300 transition">New →</Link>
-          </div>
+          <Link href="/dashboard/assess" style={{ fontSize: "13px", color: "var(--t3)", textDecoration: "none", marginTop: "4px" }}>New →</Link>
+        </div>
+
+        <p style={{ fontSize: "14px", color: "var(--t3)", marginBottom: "20px", lineHeight: 1.6 }}>{MSG[data.band]}</p>
+
+        {/* Bar */}
+        <div style={{ height: "4px", borderRadius: "2px", background: "var(--s3)", overflow: "hidden", marginBottom: "8px" }}>
+          <div style={{ height: "100%", borderRadius: "2px", background: bs.barColor, width: `${Math.max(2, Math.min(100, data.chance_percent))}%`, transition: "width 1s ease" }} />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--t3)" }}>
+          <span>Reach &lt;40%</span><span>Target 40–70%</span><span>Safe &gt;70%</span>
         </div>
       </div>
-
-      {/* Bar */}
-      <Section title="Offer chance">
-        <div className="h-3 rounded-full bg-zinc-900 overflow-hidden mb-3">
-          <div className={`h-full rounded-full transition-all duration-1000 ${barColor}`}
-            style={{ width: `${Math.max(2, Math.min(100, data.chance_percent))}%` }} />
-        </div>
-        <div className="flex justify-between text-xs text-zinc-700">
-          <span>Reach (&lt;40%)</span><span>Target (40–70%)</span><span>Safe (&gt;70%)</span>
-        </div>
-        {data.competitiveness.threshold_used != null && (
-          <div className="mt-4 flex gap-6 text-sm pt-4 border-t border-zinc-800">
-            <span className="text-zinc-600">Threshold: <span className="text-zinc-300">{data.competitiveness.threshold_used}</span></span>
-            {data.competitiveness.margin != null && (
-              <span className="text-zinc-600">Margin: <span className={data.competitiveness.margin >= 0 ? "text-emerald-400" : "text-red-400"}>
-                {data.competitiveness.margin > 0 ? "+" : ""}{data.competitiveness.margin}
-              </span></span>
-            )}
-          </div>
-        )}
-      </Section>
 
       {/* Applicant context */}
       {data.applicant_context && (
         <Section title="Real applicant pool · 2024–25">
-          <div className="flex items-end gap-3 mb-4">
-            <div className="text-4xl font-semibold">Top {100 - data.applicant_context.percentile}<span className="text-xl text-zinc-500">%</span></div>
-            <div className="text-sm text-zinc-500 mb-1">of offer holders at this university</div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginBottom: "14px" }}>
+            <span style={{ fontFamily: "var(--font-garamond, var(--serif))", fontSize: "40px", color: "var(--t)", fontWeight: 400 }}>
+              Top {100 - data.applicant_context.percentile}%
+            </span>
+            <span style={{ fontSize: "14px", color: "var(--t3)" }}>of offer holders</span>
           </div>
-          <div className="h-2 rounded-full bg-zinc-900 overflow-hidden mb-3">
-            <div className="h-full rounded-full bg-gradient-to-r from-zinc-600 to-zinc-300 transition-all duration-1000"
-              style={{ width: `${data.applicant_context.percentile}%` }} />
+          <div style={{ height: "3px", borderRadius: "2px", background: "var(--s3)", overflow: "hidden", marginBottom: "12px" }}>
+            <div style={{ height: "100%", borderRadius: "2px", background: "var(--acc)", width: `${data.applicant_context.percentile}%`, opacity: 0.6 }} />
           </div>
-          <p className="text-sm text-zinc-400">Your grade profile puts you in the top {100 - data.applicant_context.percentile}% of {data.applicant_context.n} reported offer holders at this university.</p>
-          <p className="mt-2 text-xs text-zinc-600">Based on self-reported 2024–25 data. Grades alone don't determine your chances.</p>
+          <p style={{ fontSize: "14px", color: "var(--t3)", lineHeight: 1.6 }}>
+            Your grade profile ranks in the top {100 - data.applicant_context.percentile}% of {data.applicant_context.n} self-reported offer holders at this university from 2024–25.
+          </p>
         </Section>
       )}
 
       {/* Checks */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <Section title="✅ Passed"><Bullets items={data.checks.passed} /></Section>
-        <Section title="⚠️ Concern"><Bullets items={data.checks.failed} /></Section>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+        <Section title="Passed checks"><Bullets items={data.checks.passed} /></Section>
+        <Section title="Areas of concern"><Bullets items={data.checks.failed} /></Section>
       </div>
 
       {/* Counsellor */}
       <Section title="Admissions analysis">
-        <div className="grid grid-cols-2 gap-6">
-          <div><div className="text-sm font-medium text-zinc-400 mb-3">Strengths</div><Bullets items={data.counsellor.strengths} /></div>
-          <div><div className="text-sm font-medium text-zinc-400 mb-3">Risks</div><Bullets items={data.counsellor.risks} /></div>
-          <div className="col-span-2"><div className="text-sm font-medium text-zinc-400 mb-3">What to do next</div><Bullets items={data.counsellor.what_to_do_next} /></div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "32px", marginBottom: "24px" }}>
+          <div>
+            <p style={{ fontSize: "12px", color: "var(--t3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "12px" }}>Strengths</p>
+            <Bullets items={data.counsellor.strengths} />
+          </div>
+          <div>
+            <p style={{ fontSize: "12px", color: "var(--t3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "12px" }}>Risks</p>
+            <Bullets items={data.counsellor.risks} />
+          </div>
+        </div>
+        <div style={{ borderTop: "1px solid var(--b)", paddingTop: "20px" }}>
+          <p style={{ fontSize: "12px", color: "var(--t3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "12px" }}>What to do next</p>
+          <Bullets items={data.counsellor.what_to_do_next} />
         </div>
       </Section>
 
       {/* PS */}
       {data.ps_analysis && (
-        <Section title="Personal statement review">
-          <div className="flex items-center gap-3 mb-5">
-            <span className={`rounded-full border px-4 py-1.5 text-sm font-semibold ${
-              data.ps_analysis.scores?.band === "Exceptional" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
-              : data.ps_analysis.scores?.band === "Strong" ? "bg-blue-500/10 border-blue-500/20 text-blue-300"
-              : "bg-amber-500/10 border-amber-500/20 text-amber-300"
-            }`}>{data.ps_analysis.scores?.band}</span>
-            <span className="text-zinc-500">{data.ps_analysis.scores?.weighted_total}/100</span>
+        <Section title="Personal statement">
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+            <span className="pill" style={{ background: "var(--s3)", color: "var(--t2)", border: "1px solid var(--b)" }}>{data.ps_analysis.scores?.band}</span>
+            <span style={{ fontSize: "14px", color: "var(--t3)" }}>{data.ps_analysis.scores?.weighted_total}/100</span>
           </div>
-          <div className="grid grid-cols-2 gap-6">
-            <div><div className="text-sm font-medium text-zinc-400 mb-3">Strengths</div><Bullets items={data.ps_analysis.strengths?.slice(0,4) || []} /></div>
-            <div><div className="text-sm font-medium text-zinc-400 mb-3">Areas to improve</div><Bullets items={[...(data.ps_analysis.risks||[]),...(data.ps_analysis.red_flags||[])].slice(0,4)} /></div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+            <div>
+              <p style={{ fontSize: "12px", color: "var(--t3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "12px" }}>Strengths</p>
+              <Bullets items={data.ps_analysis.strengths?.slice(0, 3) || []} />
+            </div>
+            <div>
+              <p style={{ fontSize: "12px", color: "var(--t3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "12px" }}>To improve</p>
+              <Bullets items={[...(data.ps_analysis.risks || []), ...(data.ps_analysis.red_flags || [])].slice(0, 3)} />
+            </div>
           </div>
         </Section>
       )}
 
-      <div className="flex gap-4 mt-2">
-        <Link href="/dashboard/assess" className="inline-flex rounded-2xl bg-zinc-100 text-zinc-950 px-8 py-4 font-semibold hover:bg-white hover:scale-105 active:scale-95 transition-all">
-          Try another →
-        </Link>
-        <Link href="/dashboard/tracker" className="inline-flex rounded-2xl border border-zinc-800 px-8 py-4 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition-all">
-          View tracker
-        </Link>
+      <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
+        <Link href="/dashboard/assess" className="btn-primary">Try another →</Link>
+        <Link href="/dashboard/tracker" className="btn-ghost">View tracker</Link>
       </div>
     </div>
   );

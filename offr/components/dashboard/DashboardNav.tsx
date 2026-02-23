@@ -1,17 +1,15 @@
 "use client";
-
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 
 const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: "⌂" },
-  { href: "/dashboard/assess", label: "Offer Chances", icon: "🎯" },
-  { href: "/dashboard/tracker", label: "Offer Tracker", icon: "📍" },
-  { href: "/dashboard/explore", label: "Explore Courses", icon: "🔭" },
-  { href: "/dashboard/profile", label: "My Profile", icon: "👤" },
-  { href: "/dashboard/faq", label: "FAQs", icon: "💬" },
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard/assess", label: "Offer Chances" },
+  { href: "/dashboard/tracker", label: "Offer Tracker" },
+  { href: "/dashboard/explore", label: "Explore Courses" },
+  { href: "/dashboard/profile", label: "My Profile" },
+  { href: "/dashboard/faq", label: "FAQs" },
 ];
 
 export function DashboardNav({ name }: { name: string }) {
@@ -25,37 +23,56 @@ export function DashboardNav({ name }: { name: string }) {
   }
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 border-r border-zinc-800/60 bg-zinc-950/95 backdrop-blur-sm flex flex-col">
-      {/* Logo */}
-      <div className="px-6 py-7 border-b border-zinc-800/60">
-        <span className="text-2xl font-semibold tracking-tight">offr</span>
+    <aside style={{
+      position: "fixed", left: 0, top: 0, height: "100vh", width: "220px",
+      background: "var(--s1)", borderRight: "1px solid var(--b)",
+      display: "flex", flexDirection: "column", zIndex: 50,
+    }}>
+      {/* Wordmark */}
+      <div style={{ padding: "32px 24px 28px", borderBottom: "1px solid var(--b)" }}>
+        <span style={{
+          fontFamily: "var(--font-garamond, var(--serif))",
+          fontSize: "24px", fontWeight: 400, letterSpacing: "-0.03em",
+          color: "var(--t)", fontStyle: "italic",
+        }}>offr</span>
       </div>
 
-      {/* User */}
-      <div className="px-6 py-5 border-b border-zinc-800/40">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-semibold text-zinc-300">
-            {name[0]?.toUpperCase()}
+      {/* User chip */}
+      <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--b)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{
+            width: "30px", height: "30px", borderRadius: "50%",
+            background: "var(--s3)", border: "1px solid var(--b-strong)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontFamily: "var(--font-garamond, var(--serif))",
+            fontSize: "14px", color: "var(--t2)", flexShrink: 0,
+          }}>
+            {name?.[0]?.toUpperCase()}
           </div>
-          <div>
-            <div className="text-sm font-medium text-zinc-200">{name}</div>
-            <div className="text-xs text-zinc-600">Student</div>
+          <div style={{ overflow: "hidden" }}>
+            <div style={{ fontSize: "13px", color: "var(--t)", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+            <div style={{ fontSize: "11px", color: "var(--t3)", letterSpacing: "0.05em", textTransform: "uppercase" }}>Student</div>
           </div>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {NAV.map(({ href, label, icon }) => {
+      <nav style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: "2px" }}>
+        {NAV.map(({ href, label }) => {
           const active = pathname === href;
           return (
             <Link key={href} href={href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all ${
-                active
-                  ? "bg-zinc-100 text-zinc-950 font-semibold"
-                  : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
-              }`}>
-              <span className="text-base">{icon}</span>
+              style={{
+                display: "block", padding: "9px 12px", borderRadius: "10px",
+                background: active ? "var(--acc)" : "transparent",
+                color: active ? "var(--t-inv)" : "var(--t3)",
+                textDecoration: "none", fontSize: "14px",
+                fontWeight: active ? 500 : 400,
+                transition: "all 150ms ease",
+                letterSpacing: active ? "0" : "0.01em",
+              }}
+              onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "var(--s3)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}}
+              onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t3)"; }}}>
               {label}
             </Link>
           );
@@ -63,10 +80,17 @@ export function DashboardNav({ name }: { name: string }) {
       </nav>
 
       {/* Sign out */}
-      <div className="px-3 py-4 border-t border-zinc-800/60">
-        <button onClick={signOut}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-zinc-600 hover:text-zinc-400 hover:bg-zinc-900 transition-all">
-          <span>↩</span> Sign out
+      <div style={{ padding: "12px", borderTop: "1px solid var(--b)" }}>
+        <button onClick={signOut} style={{
+          width: "100%", padding: "9px 12px", borderRadius: "10px",
+          background: "transparent", border: "none",
+          color: "var(--t3)", fontSize: "13px", cursor: "pointer",
+          textAlign: "left", fontFamily: "var(--font-dm, var(--sans))",
+          transition: "all 150ms ease",
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--s3)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t3)"; }}>
+          Sign out
         </button>
       </div>
     </aside>

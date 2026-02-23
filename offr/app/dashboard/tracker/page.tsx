@@ -8,10 +8,7 @@ export default async function TrackerPage() {
   if (!user) redirect("/auth");
 
   const { data: assessments } = await supabase
-    .from("assessments")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .from("assessments").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
 
   return <TrackerClient initialAssessments={assessments || []} />;
 }

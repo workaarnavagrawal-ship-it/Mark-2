@@ -2,175 +2,159 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
-const BAND_COLOR = {
-  Safe: { bg: "bg-emerald-500/10", border: "border-emerald-500/20", text: "text-emerald-400" },
-  Target: { bg: "bg-amber-500/10", border: "border-amber-500/20", text: "text-amber-400" },
-  Reach: { bg: "bg-red-500/10", border: "border-red-500/20", text: "text-red-400" },
-};
-
 export default async function DashboardPage() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("user_id", user.id)
-    .single();
-
+  const { data: profile } = await supabase.from("profiles").select("*").eq("user_id", user.id).single();
   if (!profile) redirect("/onboarding");
 
-  const { data: assessments } = await supabase
-    .from("assessments")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(5);
+  const { data: assessments } = await supabase.from("assessments").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(5);
+  const { data: subjects } = await supabase.from("subjects").select("*").eq("profile_id", profile.id);
 
-  const { data: subjects } = await supabase
-    .from("subjects")
-    .select("*")
-    .eq("profile_id", profile.id);
-
-  const ibTotal = subjects?.filter(s => s.level !== "A_LEVEL")
-    .reduce((sum, s) => sum + Number(s.predicted_grade), 0) || 0;
+  const ibTotal = subjects?.filter(s => s.level !== "A_LEVEL").reduce((s: number, x: any) => s + Number(x.predicted_grade), 0) || 0;
   const ibWithCore = ibTotal + (profile.core_points || 0);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   const bandCounts = { Safe: 0, Target: 0, Reach: 0 };
-  assessments?.forEach(a => { bandCounts[a.band as keyof typeof bandCounts]++; });
+  assessments?.forEach((a: any) => { if (a.band in bandCounts) bandCounts[a.band as keyof typeof bandCounts]++; });
+
+  const BAND_STYLE: Record<string, any> = {
+    Safe: { bg: "var(--safe-bg)", color: "var(--safe-t)", border: "1px solid var(--safe-b)" },
+    Target: { bg: "var(--tgt-bg)", color: "var(--tgt-t)", border: "1px solid var(--tgt-b)" },
+    Reach: { bg: "var(--rch-bg)", color: "var(--rch-t)", border: "1px solid var(--rch-b)" },
+  };
 
   return (
-    <div className="p-8 max-w-4xl">
-      {/* Header */}
-      <div className="mb-10">
-        <p className="text-zinc-500 text-base mb-1">{greeting},</p>
-        <h1 className="text-5xl font-semibold tracking-tight">{profile.name} 👋</h1>
-        <p className="mt-2 text-zinc-500">
+    <div style={{ padding: "52px 56px", maxWidth: "880px" }}>
+
+      {/* Greeting */}
+      <div style={{ marginBottom: "52px" }}>
+        <p className="label" style={{ marginBottom: "10px" }}>{greeting}</p>
+        <h1 style={{
+          fontFamily: "var(--font-garamond, var(--serif))",
+          fontSize: "52px", fontWeight: 400, letterSpacing: "-0.025em",
+          color: "var(--t)", lineHeight: 1.05, marginBottom: "14px",
+        }}>
+          {profile.name}
+        </h1>
+        <p style={{ color: "var(--t3)", fontSize: "14px" }}>
           Year {profile.year} · {profile.curriculum === "IB" ? "IB Diploma" : "A Levels"} · {profile.home_or_intl === "intl" ? "International" : "Domestic"} applicant
         </p>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
-          <div className="text-xs font-medium text-zinc-500 uppercase tracking-widest mb-3">
-            {profile.curriculum === "IB" ? "Predicted total" : "Top subjects"}
-          </div>
+      {/* Stat row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginBottom: "12px" }}>
+        {/* Score */}
+        <div className="card">
+          <p className="label">{profile.curriculum === "IB" ? "Predicted score" : "Top grades"}</p>
           {profile.curriculum === "IB" ? (
             <>
-              <div className="text-4xl font-semibold">{ibWithCore}</div>
-              <div className="text-sm text-zinc-600 mt-1">out of 45</div>
+              <p style={{ fontFamily: "var(--font-garamond, var(--serif))", fontSize: "48px", fontWeight: 400, color: "var(--t)", lineHeight: 1, marginBottom: "6px" }}>{ibWithCore}</p>
+              <p className="muted">of 45 points</p>
             </>
           ) : (
-            <div className="text-2xl font-semibold">
-              {subjects?.slice(0,3).map(s => s.predicted_grade).join(" · ") || "—"}
-            </div>
+            <p style={{ fontFamily: "var(--font-garamond, var(--serif))", fontSize: "30px", color: "var(--t)", lineHeight: 1.2 }}>
+              {subjects?.slice(0, 3).map((s: any) => s.predicted_grade).join("  ·  ") || "—"}
+            </p>
           )}
         </div>
 
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
-          <div className="text-xs font-medium text-zinc-500 uppercase tracking-widest mb-3">Choices assessed</div>
-          <div className="text-4xl font-semibold">{assessments?.length || 0}</div>
-          <div className="text-sm text-zinc-600 mt-1">of 5 UCAS choices</div>
+        {/* Choices */}
+        <div className="card">
+          <p className="label">Choices assessed</p>
+          <p style={{ fontFamily: "var(--font-garamond, var(--serif))", fontSize: "48px", fontWeight: 400, color: "var(--t)", lineHeight: 1, marginBottom: "6px" }}>{assessments?.length || 0}</p>
+          <p className="muted">of 5 UCAS slots</p>
         </div>
 
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
-          <div className="text-xs font-medium text-zinc-500 uppercase tracking-widest mb-3">Profile</div>
-          <div className="text-sm text-zinc-300 space-y-1">
-            {profile.interests?.slice(0,3).map((i: string) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="h-1 w-1 rounded-full bg-zinc-600" />
-                {i}
-              </div>
-            ))}
-            {(!profile.interests || profile.interests.length === 0) && (
-              <Link href="/dashboard/profile" className="text-zinc-500 hover:text-zinc-300 transition-colors text-xs">
-                Add interests →
-              </Link>
-            )}
-          </div>
+        {/* Interests */}
+        <div className="card">
+          <p className="label">Interests</p>
+          {profile.interests?.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginTop: "4px" }}>
+              {profile.interests.slice(0, 3).map((i: string) => (
+                <span key={i} style={{ fontSize: "14px", color: "var(--t2)" }}>{i}</span>
+              ))}
+            </div>
+          ) : (
+            <Link href="/dashboard/profile" style={{ fontSize: "13px", color: "var(--t3)", textDecoration: "none" }}>Add interests →</Link>
+          )}
         </div>
       </div>
 
-      {/* Main feature cards */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        {/* Offer chances - primary */}
-        <Link href="/dashboard/assess"
-          className="col-span-2 group rounded-2xl border border-zinc-700 bg-gradient-to-br from-zinc-900 to-zinc-950 p-7 hover:border-zinc-600 transition-all hover:scale-[1.01]">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="text-3xl mb-3">🎯</div>
-              <h2 className="text-2xl font-semibold mb-2">Check offer chances</h2>
-              <p className="text-zinc-500 text-base">Your profile is loaded. Pick a course and get an instant prediction.</p>
-            </div>
-            <span className="text-zinc-600 group-hover:text-zinc-300 transition-colors text-2xl mt-1">→</span>
+      {/* Primary CTA */}
+      <Link href="/dashboard/assess"
+        style={{
+          display: "block", padding: "28px 32px", marginBottom: "12px",
+          background: "var(--s1)", border: "1px solid var(--b-strong)",
+          borderRadius: "var(--r-card)", textDecoration: "none", transition: "border-color 160ms ease",
+        }}
+        onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = "var(--acc)"}
+        onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = "var(--b-strong)"}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <p className="label" style={{ marginBottom: "8px" }}>Profile loaded · ready to assess</p>
+            <h2 style={{ fontFamily: "var(--font-garamond, var(--serif))", fontSize: "28px", fontWeight: 400, color: "var(--t)", marginBottom: "6px" }}>
+              Check your offer chances
+            </h2>
+            <p style={{ fontSize: "14px", color: "var(--t3)" }}>Pick a course and get an instant, data-driven prediction.</p>
           </div>
-        </Link>
+          <span style={{ fontSize: "22px", color: "var(--t3)", marginLeft: "32px", flexShrink: 0 }}>→</span>
+        </div>
+      </Link>
 
-        <Link href="/dashboard/tracker"
-          className="group rounded-2xl border border-zinc-800 bg-zinc-900/30 p-6 hover:border-zinc-700 transition-all hover:scale-[1.01]">
-          <div className="text-2xl mb-3">📍</div>
-          <h3 className="text-xl font-semibold mb-2">Offer Tracker</h3>
-          <p className="text-zinc-500 text-sm">Track all 5 choices. See your full UCAS picture at a glance.</p>
-          {assessments && assessments.length > 0 && (
-            <div className="mt-4 flex gap-2">
-              {Object.entries(bandCounts).map(([band, count]) => count > 0 && (
-                <span key={band} className={`text-xs rounded-full px-3 py-1 border ${BAND_COLOR[band as keyof typeof BAND_COLOR].bg} ${BAND_COLOR[band as keyof typeof BAND_COLOR].border} ${BAND_COLOR[band as keyof typeof BAND_COLOR].text}`}>
-                  {count} {band}
-                </span>
-              ))}
+      {/* Secondary cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "48px" }}>
+        {[
+          { href: "/dashboard/tracker", label: "Offer Tracker", desc: "All 5 UCAS choices in one view.", badge: assessments?.length ? `${assessments.length} saved` : null },
+          { href: "/dashboard/explore", label: "Explore Courses", desc: "Discover degrees you didn't know existed.", badge: null },
+        ].map(item => (
+          <Link key={item.href} href={item.href} style={{
+            display: "block", padding: "22px 24px",
+            background: "var(--s1)", border: "1px solid var(--b)",
+            borderRadius: "var(--r-card)", textDecoration: "none", transition: "all 160ms ease",
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--b-strong)"; (e.currentTarget as HTMLElement).style.background = "var(--s2)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--b)"; (e.currentTarget as HTMLElement).style.background = "var(--s1)"; }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "6px" }}>
+              <h3 style={{ fontFamily: "var(--font-garamond, var(--serif))", fontSize: "20px", fontWeight: 400, color: "var(--t)" }}>{item.label}</h3>
+              {item.badge && <span style={{ fontSize: "11px", color: "var(--t3)", border: "1px solid var(--b)", borderRadius: "var(--r-pill)", padding: "2px 10px", marginLeft: "8px", flexShrink: 0 }}>{item.badge}</span>}
             </div>
-          )}
-        </Link>
-
-        <Link href="/dashboard/explore"
-          className="group rounded-2xl border border-zinc-800 bg-zinc-900/30 p-6 hover:border-zinc-700 transition-all hover:scale-[1.01]">
-          <div className="text-2xl mb-3">🔭</div>
-          <h3 className="text-xl font-semibold mb-2">Explore Courses</h3>
-          <p className="text-zinc-500 text-sm">Discover courses you didn't know existed. PPE, Liberal Arts, and more.</p>
-          {profile.interests?.length > 0 && (
-            <p className="mt-3 text-xs text-zinc-600">Based on: {profile.interests.join(", ")}</p>
-          )}
-        </Link>
+            <p style={{ fontSize: "13px", color: "var(--t3)" }}>{item.desc}</p>
+          </Link>
+        ))}
       </div>
 
       {/* Recent assessments */}
       {assessments && assessments.length > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Recent assessments</h3>
-            <Link href="/dashboard/tracker" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
-              View all →
-            </Link>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+            <h3 style={{ fontFamily: "var(--font-garamond, var(--serif))", fontSize: "20px", fontWeight: 400, color: "var(--t)" }}>Recent assessments</h3>
+            <Link href="/dashboard/tracker" style={{ fontSize: "13px", color: "var(--t3)", textDecoration: "none" }}>View all →</Link>
           </div>
-          <div className="space-y-3">
-            {assessments.slice(0,3).map(a => {
-              const bc = BAND_COLOR[a.band as keyof typeof BAND_COLOR];
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {assessments.slice(0, 3).map((a: any) => {
+              const bs = BAND_STYLE[a.band] || BAND_STYLE.Reach;
               return (
-                <div key={a.id} className="rounded-xl border border-zinc-800 bg-zinc-900/30 px-5 py-4 flex items-center justify-between">
+                <div key={a.id} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "16px 20px", background: "var(--s1)", border: "1px solid var(--b)", borderRadius: "12px",
+                }}>
                   <div>
-                    <div className="text-sm font-medium text-zinc-200">{a.course_name}</div>
-                    <div className="text-xs text-zinc-600 mt-0.5">{a.university_name}</div>
+                    <p style={{ fontSize: "14px", color: "var(--t)", fontWeight: 500, marginBottom: "2px" }}>{a.course_name}</p>
+                    <p style={{ fontSize: "12px", color: "var(--t3)" }}>{a.university_name}</p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg font-semibold text-zinc-100">{a.chance_percent}%</span>
-                    <span className={`text-xs rounded-full border px-3 py-1 ${bc.bg} ${bc.border} ${bc.text}`}>{a.band}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <span style={{ fontFamily: "var(--font-garamond, var(--serif))", fontSize: "24px", color: "var(--t)" }}>{a.chance_percent}%</span>
+                    <span className="pill" style={{ background: bs.bg, color: bs.color, border: bs.border }}>{a.band}</span>
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
-      )}
-
-      {assessments?.length === 0 && (
-        <div className="rounded-2xl border border-zinc-800 border-dashed p-10 text-center">
-          <div className="text-3xl mb-3">📭</div>
-          <p className="text-zinc-500">No assessments yet. Check your first course above.</p>
         </div>
       )}
     </div>

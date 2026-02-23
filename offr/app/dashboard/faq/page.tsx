@@ -2,38 +2,48 @@
 import { useState } from "react";
 
 const FAQS = [
-  { q: "How accurate are the predictions?", a: "offr scores are built on published entry requirements combined with real 2024–25 self-reported data from over 4,000 applicants. Your grades, personal statement quality, and applicant status are all factored in. It's a strong signal — not a guarantee." },
-  { q: "What's the difference between Reach, Target and Safe?", a: "Safe (>70%) means you're comfortably above threshold and competitive in the real applicant pool. Target (40–70%) means it could genuinely go either way. Reach (<40%) means there's a significant gap to close." },
-  { q: "Why does my personal statement matter?", a: "Our data shows a clear correlation between personal statement quality and offer rates — especially at selective universities. Students with stronger statements consistently outperform those with similar grades who have weaker ones." },
-  { q: "What is the real applicant pool data?", a: "We collected self-reported offer data from 4,000+ students who applied in 2024–25. We use this to show how your grades compare to people who actually received offers — not just the published minimum. It gives a much more honest picture." },
-  { q: "Is my personal statement stored securely?", a: "Yes. Your profile is stored with row-level security — only you can access your data. Your PS is never shared or used for any other purpose." },
+  { q: "How accurate are the predictions?", a: "offr scores are built on published entry requirements and real 2024–25 self-reported data from over 4,000 applicants. Your grades, personal statement quality, and applicant status are all weighted. It's a strong signal — not a guarantee, but far more grounded than published minimums alone." },
+  { q: "What's the difference between Reach, Target and Safe?", a: "Safe (>70%) means you're comfortably above threshold and competitive in the real applicant pool. Target (40–70%) means it could genuinely go either way. Reach (<40%) means there's a significant gap — possible, but exceptional supporting material would be needed." },
+  { q: "Why does my personal statement matter?", a: "Our data shows a clear correlation between PS quality and offer rates, particularly at selective universities. Students with stronger statements consistently outperform those with similar grades but weaker ones. offr weights PS impact based on institutional selectivity." },
+  { q: "What is the real applicant pool data?", a: "We gathered self-reported offer data from students who applied in 2024–25, across 14 universities. This lets us compare your grades to people who actually received offers — not just the published floor. It's a more honest picture of what admission really looks like." },
+  { q: "Is my data secure?", a: "Yes. Your entire profile is stored in Supabase with row-level security — only you can access your data. Your personal statement is never shared or used outside of your own assessments." },
   { q: "Can I use offr for A-Levels as well as IB?", a: "Yes. offr supports both. Your predicted grades are compared against real offer holder profiles for each course." },
-  { q: "How does the offer tracker work?", a: "Every time you run an assessment, it's automatically saved to your tracker. You can label each choice (Firm, Insurance, Backup) and view your full UCAS picture in one place. You can also delete or re-run any entry." },
-  { q: "What are hidden gems on the explore page?", a: "Hidden gems are courses that are genuinely excellent and career-relevant but less well-known. Things like MORSE, Cognitive Science, or Liberal Arts. They often have less competition too." },
-  { q: "Can I update my grades or PS later?", a: "Yes — go to My Profile anytime and edit. All future assessments will automatically use your updated information." },
-  { q: "Is offr free?", a: "Yes, completely free. No credit card, no premium tier." },
+  { q: "How does the Offer Tracker work?", a: "Every time you run an assessment, it's saved automatically. You can label each choice (Firm, Insurance, Backup), view your full UCAS picture in one place, and delete or re-run any entry at any time." },
+  { q: "What are hidden gems in Explore?", a: "Hidden gems are courses that are genuinely excellent and career-relevant, but less well-known than the obvious options — things like MORSE at Warwick, or Liberal Arts at UCL. They often have lower competition too." },
+  { q: "Can I update my profile later?", a: "Yes — go to My Profile anytime and edit your grades, personal statement, or interests. All future assessments will use your updated information." },
+  { q: "Is offr free?", a: "Yes, completely. No credit card, no premium tier." },
 ];
 
 export default function FAQPage() {
   const [open, setOpen] = useState<number | null>(null);
 
   return (
-    <div className="p-8 max-w-2xl">
-      <div className="mb-8">
-        <h1 className="text-4xl font-semibold tracking-tight mb-2">FAQs</h1>
-        <p className="text-zinc-500">Everything you need to know about how offr works.</p>
+    <div style={{ padding: "52px 56px", maxWidth: "680px" }}>
+      <div style={{ marginBottom: "48px" }}>
+        <p className="label" style={{ marginBottom: "12px" }}>Support</p>
+        <h1 style={{ fontFamily: "var(--font-garamond, var(--serif))", fontSize: "44px", fontWeight: 400, letterSpacing: "-0.025em", color: "var(--t)", marginBottom: "14px" }}>
+          Frequently asked questions
+        </h1>
+        <p style={{ fontSize: "15px", color: "var(--t3)", lineHeight: 1.6 }}>Everything you need to know about how offr works.</p>
       </div>
-      <div className="space-y-2">
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         {FAQS.map((faq, i) => (
-          <div key={i} className="rounded-2xl border border-zinc-800 overflow-hidden">
-            <button onClick={() => setOpen(open === i ? null : i)}
-              className="w-full text-left px-6 py-5 flex items-center justify-between hover:bg-zinc-900/40 transition-colors">
-              <span className="text-base font-medium text-zinc-200 pr-4">{faq.q}</span>
-              <span className={`text-zinc-500 transition-transform duration-200 shrink-0 ${open === i ? "rotate-180" : ""}`}>▾</span>
+          <div key={i} style={{ background: "var(--s1)", border: "1px solid var(--b)", borderRadius: "var(--r-card)", overflow: "hidden" }}>
+            <button onClick={() => setOpen(open === i ? null : i)} style={{
+              width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "20px 24px", background: "transparent", border: "none",
+              cursor: "pointer", textAlign: "left", gap: "16px",
+              transition: "background 150ms ease",
+            }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--s2)"}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+              <span style={{ fontSize: "15px", color: "var(--t)", fontWeight: 400, lineHeight: 1.4, fontFamily: "var(--font-dm, var(--sans))" }}>{faq.q}</span>
+              <span style={{ color: "var(--t3)", fontSize: "13px", flexShrink: 0, transition: "transform 200ms", display: "inline-block", transform: open === i ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
             </button>
             {open === i && (
-              <div className="px-6 pb-5 text-base text-zinc-400 leading-relaxed border-t border-zinc-800/60 pt-4">
-                {faq.a}
+              <div style={{ padding: "0 24px 20px", borderTop: "1px solid var(--b)" }}>
+                <p style={{ fontSize: "14px", color: "var(--t3)", lineHeight: 1.75, paddingTop: "16px" }}>{faq.a}</p>
               </div>
             )}
           </div>
