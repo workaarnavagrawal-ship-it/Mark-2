@@ -23,9 +23,11 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Redirect unauthenticated users to landing, but allow public routes
-  const publicPaths = ["/", "/auth", "/auth/callback"];
-  const isPublic = publicPaths.some((p) => request.nextUrl.pathname.startsWith(p));
+  const pathname = request.nextUrl.pathname;
+  const isPublic = ["/", "/auth"].some(p => pathname === p) ||
+    pathname.startsWith("/auth/") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api/py");
 
   if (!user && !isPublic) {
     return NextResponse.redirect(new URL("/", request.url));
