@@ -1,16 +1,8 @@
 {
-  "builds": [
+  "rewrites": [
     {
-      "src": "api/index.py",
-      "use": "@vercel/python",
-      "config": { "maxLambdaSize": "50mb" }
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
+      "source": "/api/py/:path*",
+      "destination": "/api/index.py"
     }
-  ],
-  "routes": [
-    { "src": "/api/py/(.*)", "dest": "api/index.py" }
   ]
 }
