@@ -99,7 +99,7 @@ def apply_ps_score(base_score: int, ps_out: Optional[Dict[str, Any]], university
 
 def _try_import_genai():
     try:
-        from google import genai  # type: ignore
+        import google.generativeai as genai  # type: ignore
         return genai
     except Exception:
         return None
@@ -489,7 +489,8 @@ def gemini_client():
     if not api_key:
         return None
     try:
-        return genai.Client(api_key=api_key)
+        genai.configure(api_key=api_key)
+        return genai
     except Exception:
         return None
 
@@ -499,8 +500,9 @@ def safe_detail(msg: str, e: Exception) -> str:
 
 
 def counsellor_rewrite_with_gemini(detail_level: str, payload_summary: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    client = gemini_client()
-    if client is None:
+    genai = gemini_client()
+    if genai is None:
+        print("Warning: gemini_client() returned None - AI features disabled")
         return None
 
     model = gemini_model_name()
@@ -521,27 +523,19 @@ def counsellor_rewrite_with_gemini(detail_level: str, payload_summary: Dict[str,
     )
 
     try:
-        resp = client.models.generate_content(
-            model=model,
-            contents=prompt,
-            config={
-                "temperature": 0.3,
-                "response_mime_type": "application/json",
-                "response_json_schema": {
-                    "type": "object",
-                    "properties": {
-                        "strengths": {"type": "array", "items": {"type": "string"}},
-                        "risks": {"type": "array", "items": {"type": "string"}},
-                        "what_to_do_next": {"type": "array", "items": {"type": "string"}},
-                        "notes": {"type": "array", "items": {"type": "string"}},
-                    },
-                    "required": ["strengths", "risks", "what_to_do_next", "notes"],
-                },
-            },
-        )
+        model_obj = genai.GenerativeModel(model)
+        resp = model_obj.generate_content(prompt)
         import json
-        return json.loads(resp.text)
-    except Exception:
+        text = resp.text.strip()
+        # Clean markdown if present
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1] if "\n" in text else text
+            text = text.rsplit("```", 1)[0]
+        if text.startswith("json"):
+            text = text[4:].strip()
+        return json.loads(text)
+    except Exception as e:
+        print(f"Warning: counsellor_rewrite_with_gemini failed: {e}")
         return None
 
 
@@ -949,8 +943,13 @@ Be specific, honest, and harsh where necessary. Do not pad with generic praise. 
         import google.generativeai as genai
         import os
 
-        genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            return JSONResponse({"error": "GEMINI_API_KEY not set"}, status_code=500)
+
+        genai.configure(api_key=api_key)
+        model_name = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+        model = genai.GenerativeModel(model_name)
         response = model.generate_content(prompt)
         text = response.text.strip()
 
@@ -965,6 +964,9 @@ Be specific, honest, and harsh where necessary. Do not pad with generic praise. 
         return JSONResponse(data)
 
     except json.JSONDecodeError as e:
-        return JSONResponse({"error": f"Failed to parse AI response: {str(e)}"}, status_code=500)
+        return JSONResponse({"error": f"Failed to parse AI response as JSON: {str(e)}"}, status_code=500)
+    except ImportError as e:
+        return JSONResponse({"error": f"Missing dependency: {str(e)}. Install google-generativeai."}, status_code=500)
     except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+        import traceback
+        return JSONResponse({"error": f"{str(e)}", "trace": traceback.format_exc()}, status_code=500)

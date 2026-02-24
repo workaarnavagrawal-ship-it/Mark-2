@@ -89,8 +89,10 @@ export function PSAnalyserClient({ profile }: { profile: Profile }) {
         body: JSON.stringify({ statement: ps, lines, format: profile.ps_format || "UCAS_3Q" }),
       });
 
-      if (!res.ok) throw new Error("Analysis failed");
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || `Analysis failed (${res.status})`);
+      }
       setAnalysis(data);
     } catch (e: any) {
       setErr(e.message || "Analysis failed. Check your API key is set.");

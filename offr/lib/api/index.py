@@ -497,8 +497,9 @@ def safe_detail(msg: str, e: Exception) -> str:
 
 
 def counsellor_rewrite_with_gemini(detail_level: str, payload_summary: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    client = gemini_client()
-    if client is None:
+    genai = gemini_client()
+    if genai is None:
+        print("Warning: gemini_client() returned None - AI features disabled")
         return None
 
     model = gemini_model_name()
@@ -519,27 +520,19 @@ def counsellor_rewrite_with_gemini(detail_level: str, payload_summary: Dict[str,
     )
 
     try:
-        resp = client.models.generate_content(
-            model=model,
-            contents=prompt,
-            config={
-                "temperature": 0.3,
-                "response_mime_type": "application/json",
-                "response_json_schema": {
-                    "type": "object",
-                    "properties": {
-                        "strengths": {"type": "array", "items": {"type": "string"}},
-                        "risks": {"type": "array", "items": {"type": "string"}},
-                        "what_to_do_next": {"type": "array", "items": {"type": "string"}},
-                        "notes": {"type": "array", "items": {"type": "string"}},
-                    },
-                    "required": ["strengths", "risks", "what_to_do_next", "notes"],
-                },
-            },
-        )
+        model_obj = genai.GenerativeModel(model)
+        resp = model_obj.generate_content(prompt)
         import json
-        return json.loads(resp.text)
-    except Exception:
+        text = resp.text.strip()
+        # Clean markdown if present
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1] if "\n" in text else text
+            text = text.rsplit("```", 1)[0]
+        if text.startswith("json"):
+            text = text[4:].strip()
+        return json.loads(text)
+    except Exception as e:
+        print(f"Warning: counsellor_rewrite_with_gemini failed: {e}")
         return None
 
 

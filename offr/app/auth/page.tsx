@@ -11,7 +11,12 @@ export default function AuthPage() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${location.origin}/auth/callback`,
+        queryParams: {
+          prompt: "select_account", // Force Google to show account selection
+        },
+      },
     });
     if (error) { setErr(error.message); setLoading(false); }
   }
