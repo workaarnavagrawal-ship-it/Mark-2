@@ -1,5 +1,11 @@
 -- Run this in your Supabase SQL editor
 
+-- Add missing columns to existing profiles table (if upgrading)
+alter table if exists profiles
+  add column if not exists academic_context text,
+  add column if not exists extracurricular_interests text[] default '{}',
+  add column if not exists wants_predicted_grades boolean default false;
+
 -- Profiles
 create table if not exists profiles (
   id uuid primary key default gen_random_uuid(),
@@ -9,6 +15,9 @@ create table if not exists profiles (
   curriculum text not null check (curriculum in ('IB', 'A_LEVELS')),
   home_or_intl text not null default 'intl' check (home_or_intl in ('home', 'intl')),
   interests text[] default '{}',
+  academic_context text,
+  extracurricular_interests text[] default '{}',
+  wants_predicted_grades boolean default false,
   core_points integer default 2,
   ps_format text default 'UCAS_3Q',
   ps_q1 text,
