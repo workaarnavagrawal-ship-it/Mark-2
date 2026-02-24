@@ -2,6 +2,15 @@
 
 import { useState, useEffect } from "react";
 import type { Profile } from "@/lib/types";
+import { LoadingSteps } from "./LoadingSteps";
+
+const PS_STEPS = [
+  "Reading your personal statement…",
+  "Reasoning over your PS…",
+  "Referencing historical PSs for your subject…",
+  "Adding counsellor feedback…",
+  "Listing strengths and weaknesses…",
+];
 
 interface LineFeedback {
   line: string;
@@ -161,13 +170,10 @@ export function PSAnalyserClient({ profile }: { profile: Profile }) {
           )}
 
           <button onClick={analyse} disabled={loading || !ps.trim()} className="btn-primary" style={{ width: "100%", padding: "14px" }}>
-            {loading ? (
-              <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ width: "16px", height: "16px", border: "1.5px solid var(--t-inv)", borderTopColor: "transparent", borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite" }} />
-                Analysing…
-              </span>
-            ) : "Analyse my PS →"}
+            {loading ? "Analysing…" : "Analyse my PS →"}
           </button>
+
+          {loading && <LoadingSteps steps={PS_STEPS} />}
 
           {!analysis && (
             <p style={{ fontSize: "12px", color: "var(--t3)", marginTop: "12px", lineHeight: 1.6, textAlign: "center" }}>
@@ -282,7 +288,6 @@ export function PSAnalyserClient({ profile }: { profile: Profile }) {
         )}
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); }}`}</style>
     </div>
   );
 }

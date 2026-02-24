@@ -3,6 +3,14 @@
 import { useState } from "react";
 import { upsertProfile, upsertSubjects } from "@/lib/profile";
 import type { Profile, SubjectEntry } from "@/lib/types";
+import { LoadingSteps } from "./LoadingSteps";
+
+const PROFILE_SAVE_STEPS = [
+  "Getting to know you…",
+  "Internalising your grades…",
+  "Saving your personal statement…",
+  "Updating your profile…",
+];
 
 const INTERESTS = [
   "Economics","Law","Computer Science","Medicine","Engineering","Mathematics",
@@ -259,11 +267,12 @@ export function ProfileClient({ profile, subjects }: { profile: Profile; subject
         </div>
       </div>
 
-      <div className="mt-8 flex justify-end">
+      <div className="mt-8 flex flex-col items-end gap-2">
         <button onClick={save} disabled={saving}
           className="rounded-xl bg-zinc-100 text-zinc-950 px-8 py-4 text-base font-semibold hover:bg-white disabled:opacity-40 hover:scale-105 active:scale-95 transition-all">
           {saving ? "Saving…" : saved ? "✓ Saved!" : "Save changes"}
         </button>
+        {saving && <LoadingSteps steps={PROFILE_SAVE_STEPS} />}
       </div>
     </div>
   );

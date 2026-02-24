@@ -6,6 +6,7 @@ import { getCourseDetail, getCourses, getUniversities, postOfferAssess } from "@
 import { saveAssessment } from "@/lib/storage";
 import { saveTrackerEntry } from "@/lib/profile";
 import type { CourseDetail, CourseListItem, OfferAssessRequest, Profile, SubjectEntry, UniversityItem } from "@/lib/types";
+import { LoadingSteps } from "./LoadingSteps";
 
 function norm(s: string) {
   return (s || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
@@ -216,17 +217,20 @@ export function AssessClient({ profile, subjects }: { profile: Profile; subjects
 
       {err && <p className="mb-4 text-sm text-red-400">{err}</p>}
 
-      {submitting && (
-        <div className="mb-4 flex items-center gap-3 text-sm text-zinc-500">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-700 border-t-zinc-300" />
-          Analysing your profile…
-        </div>
-      )}
-
       <button onClick={submit} disabled={!courseId || submitting}
         className="w-full rounded-2xl bg-zinc-100 text-zinc-950 py-4 text-base font-semibold hover:bg-white hover:scale-105 active:scale-95 disabled:opacity-40 transition-all">
         {submitting ? "Assessing…" : "Get my prediction 🎯"}
       </button>
+
+      {submitting && (
+        <LoadingSteps steps={[
+          "Looking at past admission data…",
+          `Analysing your ${profile.curriculum === "IB" ? "IB" : "A-Level"} subjects…`,
+          "Cross-referencing university requirements…",
+          ...(profile.ps_q1 || profile.ps_statement ? ["Weighing your personal statement…"] : []),
+          "Calculating your offer chance…",
+        ]} />
+      )}
     </div>
   );
 }

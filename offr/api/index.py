@@ -760,8 +760,8 @@ def universities():
 @app.get("/api/py/courses")
 def courses(university_id: Optional[str] = None):
     df = load_df()
-    cols = ["university_id", "course_id", "course_name", "faculty", "degree_type", "estimated_annual_cost_international", "min_requirements"]
-    out = df[cols].copy() if all(c in df.columns for c in cols) else df.copy()
+    cols = ["university_id", "course_id", "course_name", "faculty", "degree_type", "estimated_annual_cost_international", "min_requirements", "typical_offer"]
+    out = df[[c for c in cols if c in df.columns]].copy()
     if university_id:
         out = out[out["university_id"].astype(str).str.upper() == university_id.upper()]
     out = out.where(pd.notna(out), None)

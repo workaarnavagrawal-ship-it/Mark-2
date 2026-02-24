@@ -73,12 +73,14 @@ export interface UniversityItem {
 
 export interface CourseListItem {
   university_id: string;
+  university_name?: string;
   course_id: string;
   course_name: string;
   faculty: string;
   degree_type: string;
   estimated_annual_cost_international?: number;
   min_requirements?: string;
+  typical_offer?: string;
 }
 
 export interface CourseDetail extends CourseListItem {
