@@ -5,8 +5,8 @@ import { getUCASChoices, addUCASChoice, deleteUCASChoice, updateUCASChoice } fro
 import type { UCASChoice, Profile } from "@/lib/types";
 
 interface Course {
-  id: string;
-  name: string;
+  course_id: string;
+  course_name: string;
   university: string;
   university_id: string;
 }
@@ -53,8 +53,8 @@ export default function UCASChoicesClient({ userProfile }: { userProfile: Profil
     setSearchQuery(query);
     const lower = query.toLowerCase();
     const filtered = courses.filter(
-      (c) =>
-        c.name.toLowerCase().includes(lower) ||
+      (c: Course) =>
+        c.course_name.toLowerCase().includes(lower) ||
         c.university.toLowerCase().includes(lower)
     );
     setFilteredCourses(filtered);
@@ -62,7 +62,7 @@ export default function UCASChoicesClient({ userProfile }: { userProfile: Profil
 
   async function addCourse(position: number, course: Course) {
     try {
-      await addUCASChoice(position, course.id, course.name, course.university_id, course.university);
+      await addUCASChoice(position, course.course_id, course.course_name, course.university_id, course.university);
       await loadChoices();
       setSelectedPosition(null);
       setSearchQuery("");
@@ -93,7 +93,7 @@ export default function UCASChoicesClient({ userProfile }: { userProfile: Profil
   async function assessAllChoices() {
     try {
       setAssessing(true);
-      const choicesWithoutEmpty = choices.filter((c) => c.course_id);
+      const choicesWithoutEmpty = choices.filter((c: UCASChoice) => c.course_id);
       if (choicesWithoutEmpty.length === 0) {
         alert("Please add at least one course before assessing.");
         return;
@@ -132,8 +132,8 @@ export default function UCASChoicesClient({ userProfile }: { userProfile: Profil
 
       {/* 5 Choice Slots */}
       <div className="space-y-4">
-        {[1, 2, 3, 4, 5].map((position) => {
-          const choice = choices.find((c) => c.position === position);
+        {[1, 2, 3, 4, 5].map((position: number) => {
+          const choice = choices.find((c: UCASChoice) => c.position === position);
           return (
             <div
               key={position}
@@ -170,7 +170,7 @@ export default function UCASChoicesClient({ userProfile }: { userProfile: Profil
                   <label className="text-sm text-gray-600">Label:</label>
                   <select
                     value={choice.label || ""}
-                    onChange={(e) =>
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                       updateLabel(
                         position,
                         (e.target.value as "Firm" | "Insurance" | "Backup") || undefined
@@ -207,11 +207,11 @@ export default function UCASChoicesClient({ userProfile }: { userProfile: Profil
                         {filteredCourses.length > 0 ? (
                           filteredCourses.map((course) => (
                             <button
-                              key={course.id}
+                              key={course.course_id}
                               onClick={() => addCourse(position, course)}
                               className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm border-b border-gray-200 last:border-b-0"
                             >
-                              <div className="font-medium text-gray-900">{course.name}</div>
+                              <div className="font-medium text-gray-900">{course.course_name}</div>
                               <div className="text-xs text-gray-500">{course.university}</div>
                             </button>
                           ))

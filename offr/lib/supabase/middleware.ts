@@ -29,6 +29,8 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/py");
 
+  // Even if not authenticated, allow them to proceed to callback
+  // (session will be established during auth exchange)
   if (!user && !isPublic) {
     return NextResponse.redirect(new URL("/", request.url));
   }
