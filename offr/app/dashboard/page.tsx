@@ -14,16 +14,17 @@ export default async function DashboardPage() {
   const { data: assessments } = await supabase.from("assessments").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(5);
   const { data: subjects } = await supabase.from("subjects").select("*").eq("profile_id", profile.id);
 
-  const ibTotal = subjects?.filter(s => s.level !== "A_LEVEL").reduce((s: number, x: any) => s + Number(x.predicted_grade), 0) || 0;
+  const ibTotal = subjects?.filter(s => s.level !== "A_LEVEL").reduce((s: number, x: { predicted_grade: string }) => s + Number(x.predicted_grade), 0) || 0;
   const ibWithCore = ibTotal + (profile.core_points || 0);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   const bandCounts = { Safe: 0, Target: 0, Reach: 0 };
-  assessments?.forEach((a: any) => { if (a.band in bandCounts) bandCounts[a.band as keyof typeof bandCounts]++; });
+  assessments?.forEach((a: { band: string }) => { if (a.band in bandCounts) bandCounts[a.band as keyof typeof bandCounts]++; });
 
-  const BAND_STYLE: Record<string, any> = {
+  interface BandStyleEntry { bg: string; color: string; border: string; }
+  const BAND_STYLE: Record<string, BandStyleEntry> = {
     Safe: { bg: "var(--safe-bg)", color: "var(--safe-t)", border: "1px solid var(--safe-b)" },
     Target: { bg: "var(--tgt-bg)", color: "var(--tgt-t)", border: "1px solid var(--tgt-b)" },
     Reach: { bg: "var(--rch-bg)", color: "var(--rch-t)", border: "1px solid var(--rch-b)" },
@@ -59,7 +60,7 @@ export default async function DashboardPage() {
             </>
           ) : (
             <p style={{ fontFamily: "var(--font-garamond, var(--serif))", fontSize: "30px", color: "var(--t)", lineHeight: 1.2 }}>
-              {subjects?.slice(0, 3).map((s: any) => s.predicted_grade).join("  ·  ") || "—"}
+              {subjects?.slice(0, 3).map((s: { predicted_grade: string }) => s.predicted_grade).join("  ·  ") || "—"}
             </p>
           )}
         </div>
@@ -103,7 +104,7 @@ export default async function DashboardPage() {
             <Link href="/dashboard/tracker" style={{ fontSize: "13px", color: "var(--t3)", textDecoration: "none" }}>View all →</Link>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {assessments.slice(0, 3).map((a: any) => {
+            {assessments.slice(0, 3).map((a: { id: string; band: string; course_name: string; university_name: string; chance_percent: number }) => {
               const bs = BAND_STYLE[a.band] || BAND_STYLE.Reach;
               return (
                 <div key={a.id} style={{

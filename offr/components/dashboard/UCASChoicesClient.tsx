@@ -11,6 +11,17 @@ interface Course {
   university_id: string;
 }
 
+interface BulkAssessmentResult {
+  position: number;
+  course_id: string;
+  course_name: string;
+  university_name: string;
+  band: string;
+  chance_percent: number;
+  prediction: string;
+  error?: string;
+}
+
 export default function UCASChoicesClient({ userProfile }: { userProfile: Profile }) {
   const [choices, setChoices] = useState<UCASChoice[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -19,7 +30,8 @@ export default function UCASChoicesClient({ userProfile }: { userProfile: Profil
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [assessing, setAssessing] = useState(false);
-  const [assessmentResults, setAssessmentResults] = useState<any[]>([]);
+  const [assessmentResults, setAssessmentResults] = useState<BulkAssessmentResult[]>([]);
+  const [err, setErr] = useState("");
 
   // Load UCAS choices and available courses
   useEffect(() => {
@@ -32,8 +44,8 @@ export default function UCASChoicesClient({ userProfile }: { userProfile: Profil
       const data = await getUCASChoices();
       setChoices(data);
       setLoading(false);
-    } catch (err) {
-      console.error("Failed to load UCAS choices:", err);
+    } catch {
+      setErr("Failed to load your UCAS choices. Please refresh.");
       setLoading(false);
     }
   }
@@ -41,11 +53,12 @@ export default function UCASChoicesClient({ userProfile }: { userProfile: Profil
   async function loadCourses() {
     try {
       const res = await fetch("/api/py/courses");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setCourses(data);
       setFilteredCourses(data);
-    } catch (err) {
-      console.error("Failed to load courses:", err);
+    } catch {
+      setErr("Failed to load courses. Please refresh.");
     }
   }
 
@@ -67,8 +80,8 @@ export default function UCASChoicesClient({ userProfile }: { userProfile: Profil
       setSelectedPosition(null);
       setSearchQuery("");
       setFilteredCourses(courses);
-    } catch (err) {
-      console.error("Failed to add UCAS choice:", err);
+    } catch {
+      setErr("Failed to add course. Please try again.");
     }
   }
 
@@ -76,8 +89,8 @@ export default function UCASChoicesClient({ userProfile }: { userProfile: Profil
     try {
       await deleteUCASChoice(position);
       await loadChoices();
-    } catch (err) {
-      console.error("Failed to remove UCAS choice:", err);
+    } catch {
+      setErr("Failed to remove course. Please try again.");
     }
   }
 
@@ -85,8 +98,8 @@ export default function UCASChoicesClient({ userProfile }: { userProfile: Profil
     try {
       await updateUCASChoice(position, { label });
       await loadChoices();
-    } catch (err) {
-      console.error("Failed to update label:", err);
+    } catch {
+      setErr("Failed to update label. Please try again.");
     }
   }
 
@@ -95,9 +108,10 @@ export default function UCASChoicesClient({ userProfile }: { userProfile: Profil
       setAssessing(true);
       const choicesWithoutEmpty = choices.filter((c: UCASChoice) => c.course_id);
       if (choicesWithoutEmpty.length === 0) {
-        alert("Please add at least one course before assessing.");
+        setErr("Please add at least one course before assessing.");
         return;
       }
+      setErr("");
 
       const res = await fetch("/api/py/assess_bulk", {
         method: "POST",
@@ -111,9 +125,8 @@ export default function UCASChoicesClient({ userProfile }: { userProfile: Profil
       if (!res.ok) throw new Error("Assessment failed");
       const results = await res.json();
       setAssessmentResults(results);
-    } catch (err) {
-      console.error("Failed to assess choices:", err);
-      alert("Assessment failed. Please try again.");
+    } catch {
+      setErr("Assessment failed. Please try again.");
     } finally {
       setAssessing(false);
     }
@@ -129,6 +142,10 @@ export default function UCASChoicesClient({ userProfile }: { userProfile: Profil
         <h2 className="text-2xl font-bold text-gray-900 mb-2">UCAS Choices</h2>
         <p className="text-gray-600">Manually add and assess up to 5 university courses.</p>
       </div>
+
+      {err && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{err}</div>
+      )}
 
       {/* 5 Choice Slots */}
       <div className="space-y-4">

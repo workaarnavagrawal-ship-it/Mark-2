@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -18,6 +19,21 @@ app = FastAPI(
     version="0.5.0",
     docs_url="/api/py/docs",
     openapi_url="/api/py/openapi.json",
+)
+
+# CORS — allow the deployed Vercel domain and local dev
+_allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+_allowed_origins: list[str] = (
+    [o.strip() for o in _allowed_origins_env.split(",") if o.strip()]
+    if _allowed_origins_env
+    else ["http://localhost:3000", "http://127.0.0.1:3000"]
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
 DATA_DIR = Path(__file__).parent / "data"
@@ -1058,16 +1074,12 @@ Return this exact JSON structure:
 Be specific, honest, and harsh where necessary. Do not pad with generic praise. Focus on what admissions tutors at selective universities actually look for: intellectual curiosity, subject passion, independent thinking, specific examples over vague claims, and authentic voice."""
 
     try:
-        import google.generativeai as genai
-        import os
+        client = gemini_client()
+        if client is None:
+            return JSONResponse({"error": "GEMINI_API_KEY not set or Gemini unavailable"}, status_code=503)
 
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            return JSONResponse({"error": "GEMINI_API_KEY not set"}, status_code=500)
-
-        genai.configure(api_key=api_key)
-        model_name = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
-        model = genai.GenerativeModel(model_name)
+        model_name = gemini_model_name()
+        model = client.GenerativeModel(model_name)
         response = model.generate_content(prompt)
         text = response.text.strip()
 

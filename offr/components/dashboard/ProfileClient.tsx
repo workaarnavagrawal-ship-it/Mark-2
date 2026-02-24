@@ -83,18 +83,15 @@ export function ProfileClient({ profile, subjects }: { profile: Profile; subject
   async function save() {
     setErr(""); setSaving(true); setSaved(false);
     try {
-      console.log("Saving profile with:", { name, year, home_or_intl: homeOrIntl, interests, academic_context: academicContext, extracurricular_interests: extracurricular, wants_predicted_grades: wantsPredictedGrades });
       const p = await upsertProfile({ name, year, home_or_intl: homeOrIntl, interests, academic_context: academicContext, extracurricular_interests: extracurricular, wants_predicted_grades: wantsPredictedGrades, core_points: corePoints, ps_format: psFormat, ps_q1: q1, ps_q2: q2, ps_q3: q3, ps_statement: statement });
       if (!p) throw new Error("Save failed - no profile returned");
-      console.log("Profile saved:", p);
       const subs = profile.curriculum === "IB" ? [...hl, ...sl] : al;
       await upsertSubjects(p.id, subs);
-      console.log("Subjects saved");
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch (e: any) { 
-      console.error("Save error:", e);
-      setErr(e.message || "Failed to save profile"); 
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      setErr(err?.message || "Failed to save profile");
     }
     finally { setSaving(false); }
   }

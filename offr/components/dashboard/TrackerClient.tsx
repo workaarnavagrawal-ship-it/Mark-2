@@ -6,7 +6,8 @@ import type { TrackerEntry } from "@/lib/types";
 
 const LABELS = ["Firm", "Insurance", "Backup", "Wildcard", "Undecided"];
 
-const BS: Record<string, any> = {
+interface BandStyle { bg: string; color: string; border: string; bar: string; }
+const BS: Record<string, BandStyle> = {
   Safe: { bg: "var(--safe-bg)", color: "var(--safe-t)", border: "1px solid var(--safe-b)", bar: "var(--safe-t)" },
   Target: { bg: "var(--tgt-bg)", color: "var(--tgt-t)", border: "1px solid var(--tgt-b)", bar: "var(--tgt-t)" },
   Reach: { bg: "var(--rch-bg)", color: "var(--rch-t)", border: "1px solid var(--rch-b)", bar: "var(--rch-t)" },

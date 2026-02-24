@@ -80,3 +80,28 @@ create policy "Users own their subjects" on subjects for all using (
 );
 create policy "Users own their assessments" on assessments for all using (auth.uid() = user_id);
 create policy "Users own their UCAS choices" on ucas_choices for all using (auth.uid() = user_id);
+
+-- Indexes for frequently queried columns
+create index if not exists idx_profiles_user_id on profiles(user_id);
+create index if not exists idx_subjects_profile_id on subjects(profile_id);
+create index if not exists idx_assessments_user_id on assessments(user_id);
+create index if not exists idx_assessments_created_at on assessments(created_at desc);
+create index if not exists idx_ucas_choices_user_id on ucas_choices(user_id);
+create index if not exists idx_ucas_choices_user_position on ucas_choices(user_id, position);
+
+-- Auto-update updated_at timestamps
+create or replace function update_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger profiles_updated_at
+  before update on profiles
+  for each row execute function update_updated_at();
+
+create trigger ucas_choices_updated_at
+  before update on ucas_choices
+  for each row execute function update_updated_at();

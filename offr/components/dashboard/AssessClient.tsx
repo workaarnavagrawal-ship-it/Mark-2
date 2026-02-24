@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { getCourseDetail, getCourses, getUniversities, postOfferAssess } from "@/lib/api";
 import { saveAssessment } from "@/lib/storage";
 import { saveTrackerEntry } from "@/lib/profile";
-import type { CourseListItem, OfferAssessRequest, Profile, SubjectEntry, UniversityItem } from "@/lib/types";
+import type { CourseDetail, CourseListItem, OfferAssessRequest, Profile, SubjectEntry, UniversityItem } from "@/lib/types";
 
 function norm(s: string) {
   return (s || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
@@ -31,7 +31,7 @@ export function AssessClient({ profile, subjects }: { profile: Profile; subjects
   const [courseQuery, setCourseQuery] = useState("");
   const [showCourses, setShowCourses] = useState(false);
   const [uniOpen, setUniOpen] = useState(false);
-  const [courseDetail, setCourseDetail] = useState<any>(null);
+  const [courseDetail, setCourseDetail] = useState<CourseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState("");
@@ -48,18 +48,22 @@ export function AssessClient({ profile, subjects }: { profile: Profile; subjects
   }, []);
 
   useEffect(() => {
-    getUniversities().then(u => { setUniversities(u); setUniversityId(u[0]?.university_id || ""); }).catch(() => {});
+    getUniversities()
+      .then(u => { setUniversities(u); setUniversityId(u[0]?.university_id || ""); })
+      .catch(() => setErr("Failed to load universities. Please refresh."));
   }, []);
 
   useEffect(() => {
     if (!universityId) return;
     setLoading(true);
-    getCourses(universityId).then(c => { setCourses(c); setLoading(false); }).catch(() => setLoading(false));
+    getCourses(universityId)
+      .then(c => { setCourses(c); setLoading(false); })
+      .catch(() => { setLoading(false); setErr("Failed to load courses. Please refresh."); });
   }, [universityId]);
 
   useEffect(() => {
     if (!courseId) { setCourseDetail(null); return; }
-    getCourseDetail(courseId).then(setCourseDetail).catch(() => {});
+    getCourseDetail(courseId).then(setCourseDetail).catch(() => setCourseDetail(null));
   }, [courseId]);
 
   const suggestions = useMemo(() => {

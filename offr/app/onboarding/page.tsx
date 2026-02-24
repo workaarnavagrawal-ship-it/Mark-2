@@ -121,19 +121,16 @@ export default function OnboardingPage() {
         core_points: curriculum === "IB" ? corePoints : undefined,
         ps_format: psFormat, ps_q1: q1, ps_q2: q2, ps_q3: q3, ps_statement: statement,
       });
-      
+
       if (!profile) {
-        console.error("Profile save returned null");
         throw new Error("Failed to save profile - please try again");
       }
-      
-      console.log("Profile saved, now saving subjects...");
+
       await upsertSubjects(profile.id, subjects);
-      console.log("Profile and subjects saved successfully");
       router.push("/dashboard");
-    } catch (e: any) {
-      console.error("Onboarding error:", e);
-      const errorMsg = e?.message || e?.error_description || "Something went wrong";
+    } catch (e: unknown) {
+      const err = e as { message?: string; error_description?: string };
+      const errorMsg = err?.message || err?.error_description || "Something went wrong";
       if (errorMsg.includes("column") || errorMsg.includes("relation")) {
         setErr("alter table");  // Trigger the SQL display format
       } else {
