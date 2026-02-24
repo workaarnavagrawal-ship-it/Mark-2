@@ -1,58 +1,84 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 
 export default async function CallbackPage({
   searchParams,
 }: {
-  searchParams: { code?: string; token_hash?: string; type?: string };
+  searchParams: { code?: string };
 }) {
-  const supabase = createClient();
+  const cookieStore = cookies();
+  const code = searchParams.code;
 
-  // Exchange the OAuth code for a session on the server side
-  if (searchParams.code) {
-    console.log("Exchanging OAuth code for session");
-    const { error } = await supabase.auth.exchangeCodeForSession(searchParams.code);
-    if (error) {
-      console.error("Code exchange error:", error);
-      redirect("/auth?error=code_exchange_failed");
-    }
+  if (!code) {
+    console.error("[Callback] No code provided");
+    return NextResponse.redirect(new URL("/auth?error=no_code", process.env.NEXT_PUBLIC_SUPABASE_URL!));
   }
 
-  // Get the session (which should now be established after code exchange)
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  // Create a response object that we'll return with cookies
+  let response = NextResponse.next();
   
-  if (sessionError || !session || !session.user) {
-    console.error("Session error:", sessionError || "No session found after code exchange");
-    redirect("/auth?error=no_session");
+  // Create server client with proper cookie handling that updates our response
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
+          // Set cookies in the cookie store
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+          // Also set them on our response object
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
+
+  // Exchange the code for a session
+  console.log("[Callback] Exchanging code for session...");
+  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+  
+  if (exchangeError) {
+    console.error("[Callback] Code exchange failed:", exchangeError);
+    return NextResponse.redirect(new URL("/auth?error=code_exchange_failed", process.env.NEXT_PUBLIC_SUPABASE_URL!));
   }
 
-  const userId = session.user.id;
-  console.log("Session established for user:", userId);
+  console.log("[Callback] Code exchange successful");
+
+  // Verify session was created
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session?.user?.id) {
+    console.error("[Callback] No session after code exchange");
+    return NextResponse.redirect(new URL("/auth?error=no_session", process.env.NEXT_PUBLIC_SUPABASE_URL!));
+  }
+
+  console.log("[Callback] Session created for user:", session.user.id);
 
   // Check if profile exists
-  try {
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", userId)
-      .maybeSingle();
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("user_id", session.user.id)
+    .maybeSingle();
 
-    if (profileError) {
-      console.error("Profile query error:", profileError);
-      // Even if profile query fails, still redirect to onboarding
-      redirect("/onboarding");
-    }
+  if (profileError && profileError.code !== "PGRST116") {
+    console.error("[Callback] Profile query error:", profileError);
+  }
 
-    if (profile?.id) {
-      console.log("Profile found, redirecting to dashboard");
-      redirect("/dashboard");
-    } else {
-      console.log("No profile found, redirecting to onboarding");
-      redirect("/onboarding");
-    }
-  } catch (err) {
-    console.error("Profile check error:", err);
-    // Default to onboarding if anything goes wrong
-    redirect("/onboarding");
+  // Redirect based on profile status
+  if (profile?.id) {
+    console.log("[Callback] Profile exists, redirecting to /dashboard");
+    return NextResponse.redirect(new URL("/dashboard", process.env.NEXT_PUBLIC_SUPABASE_URL!));
+  } else {
+    console.log("[Callback] No profile, redirecting to /onboarding");
+    return NextResponse.redirect(new URL("/onboarding", process.env.NEXT_PUBLIC_SUPABASE_URL!));
   }
 }

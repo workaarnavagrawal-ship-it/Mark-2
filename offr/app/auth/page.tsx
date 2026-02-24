@@ -10,37 +10,53 @@ export default function AuthPage() {
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [checking, setChecking] = useState(true);
 
+  // Check session on mount and when returning from OAuth
   useEffect(() => {
     const checkSession = async () => {
+      console.log("[Auth] Checking session...");
       const supabase = createClient();
+      
+      // Get fresh session data
       const { data: { session } } = await supabase.auth.getSession();
+      console.log("[Auth] Session status:", session ? `Logged in as ${session.user.email}` : "Not logged in");
       
       if (session?.user?.email) {
         setCurrentUser(session.user.email);
         
         // Check if profile exists
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
 
-        // Auto-redirect based on profile status
-        if (profile?.id) {
-          router.push("/dashboard");
-        } else {
-          router.push("/onboarding");
+          console.log("[Auth] Profile status:", profile?.id ? "Profile exists" : "No profile");
+
+          // Auto-redirect based on profile status
+          if (profile?.id) {
+            console.log("[Auth] Redirecting to dashboard...");
+            router.push("/dashboard");
+          } else {
+            console.log("[Auth] Redirecting to onboarding...");
+            router.push("/onboarding");
+          }
+          return;
+        } catch (e) {
+          console.error("[Auth] Profile check error:", e);
         }
       }
       
       setChecking(false);
     };
+
     checkSession();
   }, [router]);
 
   async function handleAuthAction() {
     // If already logged in, navigate to dashboard
     if (currentUser) {
+      console.log("[Auth] User already logged in, navigating to dashboard");
       router.push("/dashboard");
       return;
     }
@@ -48,6 +64,8 @@ export default function AuthPage() {
     // Otherwise, sign in with Google
     setErr(""); 
     setLoading(true);
+    console.log("[Auth] Starting OAuth flow...");
+    
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -58,14 +76,19 @@ export default function AuthPage() {
         },
       },
     });
+    
     if (error) { 
+      console.error("[Auth] OAuth error:", error);
       setErr(error.message); 
       setLoading(false); 
+    } else {
+      console.log("[Auth] OAuth initiated, waiting for redirect...");
     }
   }
 
   async function signOutAndSwitchAccount() {
     setLoading(true);
+    console.log("[Auth] Signing out...");
     const supabase = createClient();
     await supabase.auth.signOut();
     // Reload to clear all state
