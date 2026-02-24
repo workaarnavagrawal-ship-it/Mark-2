@@ -24,13 +24,11 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
-  const isPublic = ["/", "/auth"].some(p => pathname === p) ||
+  const isPublic = ["/", "/auth", "/onboarding"].some(p => pathname === p) ||
     pathname.startsWith("/auth/") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/py");
 
-  // Even if not authenticated, allow them to proceed to callback
-  // (session will be established during auth exchange)
   if (!user && !isPublic) {
     return NextResponse.redirect(new URL("/", request.url));
   }

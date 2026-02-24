@@ -14,27 +14,54 @@ export default function AuthPage() {
     const checkSession = async () => {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
+      
       if (session?.user?.email) {
         setCurrentUser(session.user.email);
+        
+        // Check if profile exists
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+
+        // Auto-redirect based on profile status
+        if (profile?.id) {
+          router.push("/dashboard");
+        } else {
+          router.push("/onboarding");
+        }
       }
+      
       setChecking(false);
     };
     checkSession();
-  }, []);
+  }, [router]);
 
-  async function signInWithGoogle() {
-    setErr(""); setLoading(true);
+  async function handleAuthAction() {
+    // If already logged in, navigate to dashboard
+    if (currentUser) {
+      router.push("/dashboard");
+      return;
+    }
+
+    // Otherwise, sign in with Google
+    setErr(""); 
+    setLoading(true);
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${location.origin}/auth/callback`,
+        redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`,
         queryParams: {
           prompt: "select_account",
         },
       },
     });
-    if (error) { setErr(error.message); setLoading(false); }
+    if (error) { 
+      setErr(error.message); 
+      setLoading(false); 
+    }
   }
 
   async function signOutAndSwitchAccount() {
@@ -78,7 +105,7 @@ export default function AuthPage() {
           </div>
         )}
 
-        <button onClick={signInWithGoogle} disabled={loading || checking} style={{
+        <button onClick={handleAuthAction} disabled={loading || checking} style={{
           width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px",
           padding: "14px 24px", borderRadius: "var(--r-input)",
           background: "var(--s2)", border: "1px solid var(--b-strong)",

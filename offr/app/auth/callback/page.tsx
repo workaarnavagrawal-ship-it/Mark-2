@@ -8,35 +8,38 @@ export default async function CallbackPage({
 }) {
   const supabase = createClient();
 
+  // Exchange the OAuth code for a session on the server side
+  if (searchParams.code) {
+    console.log("Exchanging OAuth code for session");
+    const { error } = await supabase.auth.exchangeCodeForSession(searchParams.code);
+    if (error) {
+      console.error("Code exchange error:", error);
+      redirect("/auth?error=code_exchange_failed");
+    }
+  }
+
+  // Get the session (which should now be established after code exchange)
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  
+  if (sessionError || !session || !session.user) {
+    console.error("Session error:", sessionError || "No session found after code exchange");
+    redirect("/auth?error=no_session");
+  }
+
+  const userId = session.user.id;
+  console.log("Session established for user:", userId);
+
+  // Check if profile exists
   try {
-    // Exchange the OAuth code for a session on the server side
-    if (searchParams.code) {
-      console.log("Exchanging OAuth code for session");
-      const { error } = await supabase.auth.exchangeCodeForSession(searchParams.code);
-      if (error) {
-        console.error("Code exchange error:", error);
-        redirect("/auth?error=code_exchange_failed");
-      }
-    }
-
-    // Verify we have a session now
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      console.error("User fetch error:", userError);
-      redirect("/auth?error=no_user");
-    }
-
-    console.log("User authenticated:", user.id);
-
-    // Check if profile exists
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .maybeSingle();
 
     if (profileError) {
       console.error("Profile query error:", profileError);
+      // Even if profile query fails, still redirect to onboarding
       redirect("/onboarding");
     }
 
@@ -48,33 +51,8 @@ export default async function CallbackPage({
       redirect("/onboarding");
     }
   } catch (err) {
-    console.error("Callback error:", err);
-    redirect("/auth?error=callback_error");
+    console.error("Profile check error:", err);
+    // Default to onboarding if anything goes wrong
+    redirect("/onboarding");
   }
-
-  return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      background: "var(--bg)",
-      flexDirection: "column",
-      gap: "16px",
-    }}>
-      <div style={{ textAlign: "center" }}>
-        <div style={{
-          width: "40px",
-          height: "40px",
-          border: "2px solid var(--b-strong)",
-          borderTopColor: "var(--t)",
-          borderRadius: "50%",
-          animation: "spin 0.8s linear infinite",
-          margin: "0 auto 16px",
-        }} />
-        <p style={{ color: "var(--t3)", fontSize: "14px" }}>Setting up your account…</p>
-      </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); }}`}</style>
-    </div>
-  );
 }
