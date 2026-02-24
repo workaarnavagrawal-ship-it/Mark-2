@@ -29,13 +29,18 @@ export async function upsertProfile(data: Partial<Profile>): Promise<Profile | n
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
+  console.log("Saving profile with data:", data);
+
   const { data: profile, error } = await supabase
     .from("profiles")
     .upsert({ ...data, user_id: user.id, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Profile save error:", error);
+    throw error;
+  }
   return profile;
 }
 

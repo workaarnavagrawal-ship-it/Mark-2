@@ -112,6 +112,8 @@ export default function OnboardingPage() {
     setErr(""); setSaving(true);
     try {
       const subjects = curriculum === "IB" ? [...hl, ...sl] : aLevels;
+      console.log("Starting profile save...");
+      
       const profile = await upsertProfile({
         name, year, curriculum, home_or_intl: homeOrIntl,
         interests, academic_context: academicContext, extracurricular_interests: extracurricular,
@@ -119,11 +121,24 @@ export default function OnboardingPage() {
         core_points: curriculum === "IB" ? corePoints : undefined,
         ps_format: psFormat, ps_q1: q1, ps_q2: q2, ps_q3: q3, ps_statement: statement,
       });
-      if (!profile) throw new Error("Failed to save profile");
+      
+      if (!profile) {
+        console.error("Profile save returned null");
+        throw new Error("Failed to save profile - please try again");
+      }
+      
+      console.log("Profile saved, now saving subjects...");
       await upsertSubjects(profile.id, subjects);
+      console.log("Profile and subjects saved successfully");
       router.push("/dashboard");
     } catch (e: any) {
-      setErr(e.message || "Something went wrong");
+      console.error("Onboarding error:", e);
+      const errorMsg = e?.message || e?.error_description || "Something went wrong";
+      if (errorMsg.includes("column") || errorMsg.includes("relation")) {
+        setErr("alter table");  // Trigger the SQL display format
+      } else {
+        setErr(errorMsg);
+      }
     } finally {
       setSaving(false);
     }
@@ -340,7 +355,25 @@ export default function OnboardingPage() {
           )}
         </div>
 
-        {err && <p className="mt-4 text-sm text-red-400">{err}</p>}
+        {err && (
+          <div className="mt-4 p-4 bg-red-900/20 border border-red-800/50 rounded-lg">
+            {err.includes("alter table") ? (
+              <div className="space-y-2">
+                <p className="text-sm text-red-300 font-medium">Database setup needed:</p>
+                <p className="text-sm text-red-200">Go to your Supabase SQL editor and run this:</p>
+                <pre className="bg-zinc-950 p-3 rounded border border-zinc-800 text-xs text-red-100 overflow-x-auto">
+                  <code>{`alter table profiles
+  add column if not exists academic_context text,
+  add column if not exists extracurricular_interests text[] default '{}',
+  add column if not exists wants_predicted_grades boolean default false;`}</code>
+                </pre>
+                <p className="text-xs text-red-300">Then close this tab and sign in again.</p>
+              </div>
+            ) : (
+              <p className="text-sm text-red-300">{err}</p>
+            )}
+          </div>
+        )}
 
         <div className="mt-6 flex items-center justify-between">
           <button onClick={() => setStep(s => Math.max(1, s-1) as Step)} disabled={step === 1 || saving}
