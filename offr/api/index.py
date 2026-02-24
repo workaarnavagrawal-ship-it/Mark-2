@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 import math
@@ -8,7 +9,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 app = FastAPI(
@@ -895,3 +897,74 @@ def suggest_alternatives(course_id: str, home_min_target: Optional[int]) -> Dict
 
     top = candidates[:3]
     return {"suggested_course_ids": [c[0] for c in top], "suggested_course_names": [c[1] for c in top]}
+
+
+@app.post("/api/py/analyse_ps")
+async def analyse_ps(request: Request):
+    body = await request.json()
+    statement = body.get("statement", "")
+    lines = body.get("lines", [])
+    ps_format = body.get("format", "UCAS_3Q")
+
+    if not statement or not lines:
+        return JSONResponse({"error": "Missing statement or lines"}, status_code=400)
+
+    prompt = f"""You are a world-class UK university admissions consultant with 20 years of experience at Oxford, Cambridge, and Russell Group institutions.
+
+Analyse this personal statement ({ps_format} format) and return ONLY a valid JSON object with NO markdown, no commentary, no code fences.
+
+Personal statement:
+\"\"\"
+{statement}
+\"\"\"
+
+The statement has been split into {len(lines)} chunks. Analyse each one.
+
+Chunks:
+{json.dumps([{"index": i, "text": line} for i, line in enumerate(lines)], indent=2)}
+
+Return this exact JSON structure:
+{{
+  "overallScore": <integer 0-100>,
+  "band": <"Exceptional" | "Strong" | "Solid" | "Developing" | "Weak">,
+  "summary": <2-3 sentence honest overall assessment>,
+  "strengths": [<3 specific strengths as short strings>],
+  "weaknesses": [<3 specific weaknesses as short strings>],
+  "topPriority": <single most important thing to fix, 1 sentence>,
+  "lineFeedback": [
+    {{
+      "lineNumber": <index starting at 0>,
+      "line": <exact text of the chunk>,
+      "score": <integer 1-10>,
+      "verdict": <"strong" | "weak" | "improve" | "neutral">,
+      "feedback": <honest 1-2 sentence critique of this specific passage>,
+      "suggestion": <optional improved rewrite of just this passage, or null>
+    }}
+  ]
+}}
+
+Be specific, honest, and harsh where necessary. Do not pad with generic praise. Focus on what admissions tutors at selective universities actually look for: intellectual curiosity, subject passion, independent thinking, specific examples over vague claims, and authentic voice."""
+
+    try:
+        import google.generativeai as genai
+        import os
+
+        genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+
+        # Strip markdown fences if present
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1] if "\n" in text else text
+            text = text.rsplit("```", 1)[0]
+        if text.startswith("json"):
+            text = text[4:].strip()
+
+        data = json.loads(text)
+        return JSONResponse(data)
+
+    except json.JSONDecodeError as e:
+        return JSONResponse({"error": f"Failed to parse AI response: {str(e)}"}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
