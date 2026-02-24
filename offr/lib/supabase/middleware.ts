@@ -30,7 +30,7 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/api/py");
 
   if (!user && !isPublic) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/auth", request.url));
   }
 
   return supabaseResponse;
