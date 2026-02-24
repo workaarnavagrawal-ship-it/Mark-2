@@ -21,17 +21,19 @@ app = FastAPI(
     openapi_url="/api/py/openapi.json",
 )
 
-# CORS — allow the deployed Vercel domain and local dev
+# CORS — on Vercel the frontend and API share the same origin so no restriction needed.
+# In development, Next.js proxies /api/py/* so the browser never makes a cross-origin call.
+# ALLOWED_ORIGINS env var is optional: set it to restrict origins in custom deployments.
 _allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
 _allowed_origins: list[str] = (
     [o.strip() for o in _allowed_origins_env.split(",") if o.strip()]
     if _allowed_origins_env
-    else ["http://localhost:3000", "http://127.0.0.1:3000"]
+    else ["*"]
 )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
-    allow_credentials=True,
+    allow_credentials=_allowed_origins != ["*"],
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
