@@ -11,6 +11,12 @@ const INTERESTS = [
   "Geography","Sociology","Education","Environmental Science",
 ];
 
+const EXTRACURRICULAR = [
+  "Sports","Tennis","Football","Basketball","Rowing","Cricket","Athletics",
+  "Gaming","Music","Photography","Debate","Model UN","Drama","Art","Coding",
+  "Startups","Volunteering","Clubs","Drawing","Writing","Dancing","Chess",
+];
+
 const IB_SUBJECTS = [
   "Math AA HL","Math AI HL","Math AA SL","Math AI SL","Economics","Business Management",
   "History","Geography","Psychology","Philosophy","English A Lang & Lit","English A Literature",
@@ -37,6 +43,9 @@ export function ProfileClient({ profile, subjects }: { profile: Profile; subject
   const [year, setYear] = useState(profile.year);
   const [homeOrIntl, setHomeOrIntl] = useState(profile.home_or_intl);
   const [interests, setInterests] = useState<string[]>(profile.interests || []);
+  const [academicContext, setAcademicContext] = useState(profile.academic_context || "");
+  const [extracurricular, setExtracurricular] = useState<string[]>(profile.extracurricular_interests || []);
+  const [wantsPredictedGrades, setWantsPredictedGrades] = useState(profile.wants_predicted_grades || false);
   const [corePoints, setCorePoints] = useState(profile.core_points || 2);
   const [psFormat, setPsFormat] = useState<"UCAS_3Q"|"LEGACY">(profile.ps_format || "UCAS_3Q");
   const [q1, setQ1] = useState(profile.ps_q1 || "");
@@ -67,10 +76,14 @@ export function ProfileClient({ profile, subjects }: { profile: Profile; subject
     prev.includes(i) ? prev.filter(x => x !== i) : prev.length < 3 ? [...prev, i] : prev
   );
 
+  const toggleExtracurricular = (e: string) => setExtracurricular(prev =>
+    prev.includes(e) ? prev.filter(x => x !== e) : [...prev, e]
+  );
+
   async function save() {
     setErr(""); setSaving(true); setSaved(false);
     try {
-      const p = await upsertProfile({ name, year, home_or_intl: homeOrIntl, interests, core_points: corePoints, ps_format: psFormat, ps_q1: q1, ps_q2: q2, ps_q3: q3, ps_statement: statement });
+      const p = await upsertProfile({ name, year, home_or_intl: homeOrIntl, interests, academic_context: academicContext, extracurricular_interests: extracurricular, wants_predicted_grades: wantsPredictedGrades, core_points: corePoints, ps_format: psFormat, ps_q1: q1, ps_q2: q2, ps_q3: q3, ps_statement: statement });
       if (!p) throw new Error("Save failed");
       const subs = profile.curriculum === "IB" ? [...hl, ...sl] : al;
       await upsertSubjects(p.id, subs);
@@ -132,6 +145,36 @@ export function ProfileClient({ profile, subjects }: { profile: Profile; subject
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        {/* Academic Context & Extracurricular */}
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-6 space-y-4">
+          <div className="text-xs font-medium text-zinc-500 uppercase tracking-widest">About you</div>
+          <div>
+            <label className="block text-xs text-zinc-500 mb-2">What do you love studying?</label>
+            <textarea className={`${inp} min-h-[70px] resize-none`} placeholder="E.g. I'm fascinated by philosophy and how ideas shape the world..." value={academicContext} onChange={e => setAcademicContext(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-xs text-zinc-500 mb-2">Outside of class — sports, gaming, clubs, etc.</label>
+            <div className="flex flex-wrap gap-2">
+              {EXTRACURRICULAR.map(e => {
+                const active = extracurricular.includes(e);
+                return (
+                  <button key={e} onClick={() => toggleExtracurricular(e)}
+                    className={`rounded-full border px-3 py-1.5 text-sm transition-all ${active ? "bg-zinc-100 text-zinc-950 border-zinc-100" : "border-zinc-800 text-zinc-500 hover:border-zinc-600"}`}>
+                    {e}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-zinc-500 mb-2">Track predicted grades as they develop?</label>
+            <div className="flex gap-3">
+              <button onClick={() => setWantsPredictedGrades(true)} className={tog(wantsPredictedGrades)}>Yes, track my grades</button>
+              <button onClick={() => setWantsPredictedGrades(false)} className={tog(!wantsPredictedGrades)}>Not right now</button>
+            </div>
           </div>
         </div>
 

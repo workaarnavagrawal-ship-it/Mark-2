@@ -25,6 +25,9 @@ export interface Profile {
   ps_q3?: string;
   ps_format?: "UCAS_3Q" | "LEGACY";
   ps_statement?: string;
+  academic_context?: string; // what they like studying / intellectual interests
+  extracurricular_interests?: string[]; // sports, games, hobbies, activities
+  wants_predicted_grades?: boolean; // whether they want to track grades during school
   created_at?: string;
   updated_at?: string;
 }
