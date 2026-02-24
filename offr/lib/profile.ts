@@ -26,8 +26,17 @@ export async function getProfile(): Promise<ProfileWithSubjects | null> {
 
 export async function upsertProfile(data: Partial<Profile>): Promise<Profile | null> {
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  
+  if (userError) {
+    console.error("Failed to get user:", userError);
+    throw new Error(`Auth error: ${userError.message}`);
+  }
+  
+  if (!user) {
+    console.error("No user found - session may not be established yet");
+    throw new Error("You are not logged in. Please sign in again.");
+  }
 
   console.log("Saving profile with data:", data);
 
@@ -41,6 +50,8 @@ export async function upsertProfile(data: Partial<Profile>): Promise<Profile | n
     console.error("Profile save error:", error);
     throw error;
   }
+  
+  console.log("Profile saved successfully:", profile);
   return profile;
 }
 

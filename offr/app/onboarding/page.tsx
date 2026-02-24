@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { upsertProfile, upsertSubjects } from "@/lib/profile";
@@ -104,6 +104,19 @@ export default function OnboardingPage() {
     );
   };
 
+  useEffect(() => {
+    // Verify user is logged in
+    const checkAuth = async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        console.log("No session found, redirecting to auth");
+        router.push("/auth");
+      }
+    };
+    checkAuth();
+  }, [router]);
+
   const inp = "w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 text-base text-zinc-100 focus:outline-none focus:border-zinc-600 transition-colors";
   const sel = inp;
   const tog = (active: boolean) => `rounded-xl px-6 py-3 text-base border transition-all duration-200 ${active ? "bg-zinc-100 text-zinc-950 border-zinc-100 font-semibold" : "bg-transparent text-zinc-400 border-zinc-800 hover:border-zinc-600"}`;
@@ -111,8 +124,19 @@ export default function OnboardingPage() {
   async function finish() {
     setErr(""); setSaving(true);
     try {
+      // Validate required fields
+      if (!name || !year || !curriculum || !homeOrIntl) {
+        throw new Error("Please fill in all required fields");
+      }
+      
       const subjects = curriculum === "IB" ? [...hl, ...sl] : aLevels;
+      
+      if (subjects.length === 0) {
+        throw new Error("Please add at least one subject");
+      }
+      
       console.log("Starting profile save...");
+      console.log("Name:", name, "Year:", year, "Curriculum:", curriculum);
       
       const profile = await upsertProfile({
         name, year, curriculum, home_or_intl: homeOrIntl,
@@ -123,8 +147,7 @@ export default function OnboardingPage() {
       });
       
       if (!profile) {
-        console.error("Profile save returned null");
-        throw new Error("Failed to save profile - please try again");
+        throw new Error("Profile save returned no data - try signing in again");
       }
       
       console.log("Profile saved, now saving subjects...");
@@ -136,6 +159,8 @@ export default function OnboardingPage() {
       const errorMsg = e?.message || e?.error_description || "Something went wrong";
       if (errorMsg.includes("column") || errorMsg.includes("relation")) {
         setErr("alter table");  // Trigger the SQL display format
+      } else if (errorMsg.includes("not logged in") || errorMsg.includes("Auth error")) {
+        setErr(`${errorMsg} - Please close this tab and sign in again.`);
       } else {
         setErr(errorMsg);
       }
