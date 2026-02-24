@@ -1,5 +1,5 @@
 import { createClient } from "./supabase/client";
-import type { Profile, ProfileWithSubjects, SubjectEntry, TrackerEntry } from "./types";
+import type { Profile, ProfileWithSubjects, SubjectEntry, TrackerEntry, UCASChoice } from "./types";
 
 // ── Profile ──────────────────────────────────────────────────────
 export async function getProfile(): Promise<ProfileWithSubjects | null> {
@@ -83,4 +83,83 @@ export async function updateTrackerLabel(id: string, label: string): Promise<voi
 export async function deleteTrackerEntry(id: string): Promise<void> {
   const supabase = createClient();
   await supabase.from("assessments").delete().eq("id", id);
+}
+
+// ── UCAS Choices ─────────────────────────────────────────────────
+export async function getUCASChoices(): Promise<UCASChoice[]> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data } = await supabase
+    .from("ucas_choices")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("position", { ascending: true });
+  return data || [];
+}
+
+export async function addUCASChoice(
+  position: number,
+  course_id: string,
+  course_name: string,
+  university_id: string,
+  university_name: string,
+  label?: "Firm" | "Insurance" | "Backup"
+): Promise<UCASChoice | null> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from("ucas_choices")
+    .upsert(
+      {
+        user_id: user.id,
+        position,
+        course_id,
+        course_name,
+        university_id,
+        university_name,
+        label,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,position" }
+    )
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateUCASChoice(
+  position: number,
+  updates: Partial<Omit<UCASChoice, "id" | "user_id" | "position">>
+): Promise<UCASChoice | null> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from("ucas_choices")
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("user_id", user.id)
+    .eq("position", position)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteUCASChoice(position: number): Promise<void> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase
+    .from("ucas_choices")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("position", position);
 }

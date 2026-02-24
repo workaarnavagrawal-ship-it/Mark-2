@@ -53,13 +53,30 @@ create table if not exists assessments (
   created_at timestamptz default now()
 );
 
+-- UCAS Choices (manually added 5 choices)
+create table if not exists ucas_choices (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade not null,
+  position integer not null check (position >= 1 and position <= 5),
+  course_id text not null,
+  course_name text not null,
+  university_id text not null,
+  university_name text not null,
+  label text check (label in ('Firm', 'Insurance', 'Backup', null)),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique(user_id, position)
+);
+
 -- RLS
 alter table profiles enable row level security;
 alter table subjects enable row level security;
 alter table assessments enable row level security;
+alter table ucas_choices enable row level security;
 
 create policy "Users own their profile" on profiles for all using (auth.uid() = user_id);
 create policy "Users own their subjects" on subjects for all using (
   auth.uid() = (select user_id from profiles where id = profile_id)
 );
 create policy "Users own their assessments" on assessments for all using (auth.uid() = user_id);
+create policy "Users own their UCAS choices" on ucas_choices for all using (auth.uid() = user_id);

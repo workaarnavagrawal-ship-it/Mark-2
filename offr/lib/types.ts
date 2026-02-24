@@ -51,6 +51,20 @@ export interface TrackerEntry {
   created_at?: string;
 }
 
+// ── UCAS Choices (manually added) ────────────────────────────────
+export interface UCASChoice {
+  id?: string;
+  user_id: string;
+  position: number; // 1-5
+  course_id: string;
+  course_name: string;
+  university_id: string;
+  university_name: string;
+  label?: "Firm" | "Insurance" | "Backup"; // optional label
+  created_at?: string;
+  updated_at?: string;
+}
+
 // ── API types (backend) ──────────────────────────────────────────
 export interface UniversityItem {
   university_id: string;

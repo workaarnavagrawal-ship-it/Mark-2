@@ -451,6 +451,20 @@ class OfferAssessRequest(BaseModel):
     ps: Optional[PsInput] = None
 
 
+class UCASChoiceInput(BaseModel):
+    position: int
+    course_id: str
+    course_name: str
+    university_id: str
+    university_name: str
+    label: Optional[str] = None
+
+
+class BulkAssessRequest(BaseModel):
+    choices: List[UCASChoiceInput]
+    profile: Dict[str, Any]  # Profile data with curriculum, grades, ps, etc.
+
+
 class RubricCell(BaseModel):
     score: int = Field(ge=0, le=10)
     why: List[str]
@@ -735,7 +749,14 @@ def courses(university_id: Optional[str] = None):
     out = out.where(pd.notna(out), None)
     if "estimated_annual_cost_international" in out.columns:
         out["estimated_annual_cost_international"] = out["estimated_annual_cost_international"].map(to_money)
-    return out.to_dict(orient="records")
+    
+    # Add university_name mapping
+    records = out.to_dict(orient="records")
+    for record in records:
+        if record.get("university_id"):
+            record["university"] = UNIVERSITY_NAME_MAP.get(record["university_id"], record["university_id"])
+    
+    return records
 
 
 @app.get("/api/py/course/{course_id}")
@@ -746,6 +767,103 @@ def course(course_id: str):
 @app.get("/api/py/health")
 def health():
     return {"status": "ok"}
+
+
+@app.post("/api/py/assess_bulk")
+def assess_bulk(payload: BulkAssessRequest):
+    """
+    Assess multiple UCAS choices at once.
+    Returns a list of assessments, one for each choice.
+    """
+    results = []
+    profile = payload.profile
+    
+    for choice in payload.choices:
+        try:
+            # Build the assessment request based on profile type
+            curriculum = profile.get("curriculum", "IB")
+            home_or_intl = profile.get("applicant_type", "home")
+            
+            # Build curriculum-specific payloads
+            assess_payload = OfferAssessRequest(
+                course_id=choice.course_id,
+                home_or_intl=home_or_intl,
+                curriculum=curriculum
+            )
+            
+            # Parse grades from profile
+            if curriculum == "IB":
+                hl_list = profile.get("hl", [])
+                sl_list = profile.get("sl", [])
+                core_points = profile.get("core_points", 0)
+                
+                hl_subjects = [
+                    IBSubject(subject=h.get("subject"), grade=int(h.get("grade", 0)))
+                    for h in hl_list if h.get("subject") and h.get("grade")
+                ]
+                sl_subjects = [
+                    IBSubject(subject=s.get("subject"), grade=int(s.get("grade", 0)))
+                    for s in sl_list if s.get("subject") and s.get("grade")
+                ]
+                
+                assess_payload.ib = IBPayload(
+                    hl=hl_subjects,
+                    sl=sl_subjects,
+                    core_points=int(core_points) if core_points else 0
+                )
+            
+            elif curriculum == "A_LEVELS":
+                predicted_list = profile.get("subjects", [])
+                predicted_subjects = [
+                    ALevelItem(subject=p.get("subject"), grade=p.get("grade"))
+                    for p in predicted_list if p.get("subject") and p.get("grade")
+                ]
+                
+                assess_payload.a_levels = ALevelPayload(predicted=predicted_subjects)
+            
+            # Add personal statement if available
+            if profile.get("personal_statement"):
+                assess_payload.ps = PsInput(
+                    format="UCAS_3Q",
+                    q1=profile.get("personal_statement"),
+                    q2=None,
+                    q3=None,
+                    statement=profile.get("personal_statement"),
+                    rewrite_mode=False
+                )
+            
+            # Run assessment
+            result = assess(assess_payload)
+            
+            # Flatten the result for easier UI consumption
+            flat_result = {
+                "position": choice.position,
+                "course_id": choice.course_id,
+                "course_name": choice.course_name,
+                "university_id": choice.university_id,
+                "university_name": choice.university_name,
+                "label": choice.label,
+                "verdict": result.get("verdict"),
+                "band": result.get("band"),
+                "chance_percent": result.get("chance_percent"),
+                "prediction": result.get("band", "Unknown"),
+            }
+            
+            results.append(flat_result)
+        
+        except Exception as e:
+            # If one choice fails, return error info for that choice
+            results.append({
+                "position": choice.position,
+                "course_id": choice.course_id,
+                "course_name": choice.course_name,
+                "university_name": choice.university_name,
+                "error": str(e),
+                "band": "Error",
+                "chance_percent": 0
+            })
+    
+    return results
 
 
 @app.post("/api/py/assess")
