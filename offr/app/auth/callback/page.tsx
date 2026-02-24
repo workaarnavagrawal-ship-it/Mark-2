@@ -111,14 +111,4 @@ export default function CallbackPage() {
       <style>{`@keyframes spin { to { transform: rotate(360deg); }}`}</style>
     </div>
   );
-}  }, [router]);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-zinc-300 mx-auto mb-4" />
-        <p className="text-zinc-500">Signing you in...</p>
-      </div>
-    </div>
-  );
 }
